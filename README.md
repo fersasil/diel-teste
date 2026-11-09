@@ -46,23 +46,35 @@ docker compose --profile test run --rm e2e-tests
 ## Arquitetura
 
 ```mermaid
-flowchart LR
+flowchart TB
   sim[Simulador] -->|MQTT QoS 1| emqx[EMQX]
-  emqx -->|grupo compartilhado| w1[Worker 1]
-  emqx -->|grupo compartilhado| w2[Worker 2]
-  w1 --> redis[(Redis Stream)]
-  w2 --> redis
-  w1 --> minio[(MinIO)]
-  w2 --> minio
-  w1 --> db[(TimescaleDB)]
-  w2 --> db
+
+  subgraph ingest [Ingestão]
+    direction LR
+    w1[Worker 1]
+    w2[Worker 2]
+  end
+  emqx -->|cada pacote para um worker| ingest
+
+  subgraph dados [Dados]
+    direction LR
+    minio[("MinIO<br/>pacote cru")]
+    redis[("Redis<br/>fila, relógio e ao vivo")]
+    db[("TimescaleDB<br/>cadastro e série")]
+  end
+  ingest -->|grava| minio
+  ingest -->|grava| redis
+  ingest -->|grava| db
+
   web[Next.js] --> api[API]
-  api --> db
-  api --> redis
-  promtail[Promtail] --> loki[Loki]
-  prom[Prometheus] --> graf[Grafana]
-  loki --> graf
-  db --> graf
+  api -->|consulta| db
+  api -->|tempo real| redis
+
+  subgraph obs [Observabilidade]
+    direction LR
+    promtail[Promtail] --> loki[Loki] --> graf[Grafana]
+    prom[Prometheus] --> graf
+  end
 ```
 
 Dois workers da mesma imagem assinam `$share/ingestion/diel/telemetry`. Cada pacote entra uma vez. Os dois leem a mesma stream do Redis, cada um com nome próprio. O mesmo dispositivo segue numa faixa só dentro do processo. Entre processos, a amostra é única por ambiente e instante, e o relógio virtual só anda para frente.
