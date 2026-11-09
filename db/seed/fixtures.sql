@@ -1,4 +1,4 @@
--- Generated from data/cadastro.json. Password for every fixture user is change-me.
+-- Generated from data/cadastro.json. password_hash is scrypt, not the example password.
 INSERT INTO clients (id, name, segment) VALUES
     ('CLI-001', 'Moda Carioca', 'varejo de moda'),
     ('CLI-002', 'Banco Horizonte', 'bancário')
@@ -42,10 +42,10 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO users (
     id, name, email, password_hash, profile, client_id, allowed_store_ids
 ) VALUES
-    ('USR-001', 'Ana Ribeiro', 'ana.ribeiro@diel.example', 'change-me', 'diel_operator', NULL, '{}'),
-    ('USR-002', 'Carlos Mendes', 'carlos.mendes@modacarioca.example', 'change-me', 'network_manager', 'CLI-001', '{}'),
-    ('USR-003', 'Juliana Prado', 'juliana.prado@modacarioca.example', 'change-me', 'store_manager', 'CLI-001', ARRAY['LOJA-SP-001']),
-    ('USR-004', 'Roberto Lima', 'roberto.lima@bancohorizonte.example', 'change-me', 'network_manager', 'CLI-002', '{}')
+    ('USR-001', 'Ana Ribeiro', 'ana.ribeiro@diel.example', 'scrypt:6469656c2d666978747572652d7631:120494ae69867f80321c67e6b696ae9076bee044979168fc42dd4391fb88f51c', 'diel_operator', NULL, '{}'),
+    ('USR-002', 'Carlos Mendes', 'carlos.mendes@modacarioca.example', 'scrypt:6469656c2d666978747572652d7631:120494ae69867f80321c67e6b696ae9076bee044979168fc42dd4391fb88f51c', 'network_manager', 'CLI-001', '{}'),
+    ('USR-003', 'Juliana Prado', 'juliana.prado@modacarioca.example', 'scrypt:6469656c2d666978747572652d7631:120494ae69867f80321c67e6b696ae9076bee044979168fc42dd4391fb88f51c', 'store_manager', 'CLI-001', ARRAY['LOJA-SP-001']),
+    ('USR-004', 'Roberto Lima', 'roberto.lima@bancohorizonte.example', 'scrypt:6469656c2d666978747572652d7631:120494ae69867f80321c67e6b696ae9076bee044979168fc42dd4391fb88f51c', 'network_manager', 'CLI-002', '{}')
 ON CONFLICT (id) DO NOTHING;
 INSERT INTO devices (dev_id, environment_id)
 SELECT dev_id, id FROM environments

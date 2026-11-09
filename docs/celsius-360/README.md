@@ -11,5 +11,5 @@ dividido nos arquivos abaixo. Juntos, eles são o documento original.
 - [05. Regras, observabilidade, API e frontend](05-regras-api-frontend.md)
 
 A especificação de comportamento está em
-`specs/001-thermal-comfort-platform/spec.md`. Este diretório guarda o relato
-técnico. Onde os dois divergirem, valem a especificação e a constituição.
+`specs/001-thermal-comfort-platform/spec.md`. Este diretório descreve o que
+o repositório faz. Onde os dois divergirem, valem a especificação e o código.

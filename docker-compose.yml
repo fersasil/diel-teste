@@ -30,6 +30,8 @@ x-ingestion-worker: &ingestion-worker
     INGEST_CONCURRENCY_PEAK: ${INGEST_CONCURRENCY_PEAK:-32}
     WORKER_TEST_HOOKS: "1"
     OPEN_METEO_ARCHIVE_URL: ${OPEN_METEO_ARCHIVE_URL:-https://archive-api.open-meteo.com/v1/archive}
+  volumes:
+    - ./data:/repo/data:ro
 
 services:
   timescaledb:

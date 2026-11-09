@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "node:crypto";
+import { scryptSync, timingSafeEqual } from "node:crypto";
 import { Injectable } from "@nestjs/common";
 import jwt from "jsonwebtoken";
 import { publicUser, UserRepository } from "../../repositories/user.repository";
@@ -6,13 +6,22 @@ import type { LoginResult } from "./login.interface";
 
 export type { LoginResult } from "./login.interface";
 
+export function hashPassword(password: string, salt = "diel-fixture-v1"): string {
+  const key = scryptSync(password, salt, 32);
+  return `scrypt:${Buffer.from(salt).toString("hex")}:${key.toString("hex")}`;
+}
+
 export function passwordMatches(password: string, passwordHash: string): boolean {
-  const left = Buffer.from(password);
-  const right = Buffer.from(passwordHash);
-  if (left.length !== right.length) {
+  const [scheme, saltHex, hashHex] = passwordHash.split(":");
+  if (scheme !== "scrypt" || !saltHex || !hashHex) {
     return false;
   }
-  return timingSafeEqual(left, right);
+  const expected = Buffer.from(hashHex, "hex");
+  const actual = scryptSync(password, Buffer.from(saltHex, "hex"), expected.length);
+  if (actual.length !== expected.length) {
+    return false;
+  }
+  return timingSafeEqual(actual, expected);
 }
 
 @Injectable()

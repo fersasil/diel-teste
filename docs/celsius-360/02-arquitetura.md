@@ -5,7 +5,7 @@ horizontalmente a ingestão de dados sem afetar a performance da API REST dos
 usuários, a plataforma usa microsserviços desacoplados.
 
 - Simulador / produtor MQTT: lê o arquivo `telemetrias.jsonl` e publica os
-  pacotes no broker MQTT com controle de taxa ajustável.
+  pacotes no broker MQTT, um a um, em QoS 1. O log avança a cada mil.
 - Broker MQTT (EMQX / Mosquitto): barramento central, com assinaturas
   compartilhadas (shared subscriptions).
 - MQTT Consumer Service (`ingestion-worker`): escuta o broker, faz o parse
@@ -36,7 +36,7 @@ usuários, a plataforma usa microsserviços desacoplados.
              +-------------------+     +-------------------+     +-------------------+
              | MQTT Consumer 1   |     | MQTT Consumer 2   |     | MQTT Consumer N   |
              | (ingestion-worker)|     | (ingestion-worker)|     | (ingestion-worker)|
-             | (Worker Threads)  |     | (Worker Threads)  |     | (Worker Threads)  |
+             | réplica da ingestão|     | réplica da ingestão|     | réplica da ingestão|
              +---------+---------+     +---------+---------+     +---------+---------+
                        |                         |                         |
                        +-------------------------+-------------------------+

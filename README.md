@@ -10,7 +10,15 @@ Requisitos: Docker e Docker Compose.
 docker compose up -d --build
 ```
 
-A primeira subida aplica as migrations e o cadastro de exemplo. A senha de todos os usuários de exemplo é `change-me`.
+A primeira subida aplica as migrations e o cadastro de exemplo. A senha de todos os usuários de exemplo é `change-me`. Ela não fica gravada no banco: o seed guarda só o hash.
+
+O simulador publica os 180.951 pacotes, um a um. A web abre antes do fim. Acompanhe com:
+
+```sh
+docker compose logs -f simulator
+```
+
+A linha `published 180951` encerra a carga. Até a primeira telemetria, o cabeçalho diz "Aguardando a primeira telemetria". Depois mostra o "agora", que é o instante da amostra mais nova.
 
 | Serviço | Endereço |
 | --- | --- |
@@ -34,7 +42,7 @@ Para reprocessar o arquivo na ordem de chegada, com o stack no ar:
 docker compose run --rm -e TELEMETRY_FILE=/repo/data/telemetrias.jsonl ingestion-worker node dist/replay-file.js
 ```
 
-O arquivo precisa estar visível no container. O serviço `simulator` publica o mesmo arquivo no MQTT quando é iniciado.
+O diretório `data/` entra no worker pelo volume. O comando imprime `replayed` a cada lote de 2.000 linhas. O simulador, na subida, imprime `published` a cada mil pacotes.
 
 Testes:
 
@@ -83,7 +91,9 @@ Dois workers da mesma imagem assinam `$share/ingestion/diel/telemetry`. Cada pac
 
 O cadastro fica no Postgres. A série tratada fica numa hypertable do TimescaleDB, com agregação horária contínua. O pacote cru vai para o MinIO, um objeto novo por lote, em `dt=AAAA-MM-DD/hour=HH/client=ID/{id}.jsonl.gz`. A fila, o relógio virtual e o tempo real ficam no Redis. São naturezas diferentes: cadastro muda pouco, a série cresce por tempo, e o cru é arquivo imutável.
 
-O "agora" é o instante da amostra mais nova já processada. Online significa visto nos últimos 15 minutos desse relógio. Offline é visto antes disso. Sem dados é nunca visto.
+O "agora" é o instante da amostra mais nova já processada, e o cabeçalho da web mostra esse horário. Online significa visto nos últimos 15 minutos desse relógio. Offline é visto antes disso. Sem dados é nunca visto.
+
+O arquivo `telemetrias.jsonl` tem 180.951 pacotes. Desses, 247 vieram atrasados (`saved_data`), 220 trazem ao menos uma leitura fora de −10 °C a 60 °C, e cerca de 1.100 linhas repetem o mesmo dispositivo no mesmo timestamp. Leitura fora da faixa vira anomalia e não entra na série. Pacote atrasado grava no instante calculado e não puxa o relógio para trás. Repetição esbarra na chave única de ambiente e instante, então rodar de novo não duplica amostra nem anomalia.
 
 O conforto do período é tempo, não contagem de amostra. O denominador é o expediente do ambiente dentro da janela, no fuso da loja. Cada amostra dentro da faixa cobre 30 segundos, o intervalo do arquivo. O expediente em que o dispositivo ficou mudo entra no denominador e não no numerador. A lacuna também aparece no gráfico.
 

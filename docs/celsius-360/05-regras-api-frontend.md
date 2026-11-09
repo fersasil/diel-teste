@@ -54,8 +54,8 @@ Loki e TimescaleDB, e o painel Ingestão.
 
 Identidade visual institucional Diel Energia.
 
-Seletor rápido de persona na barra superior.
+O operador da Diel escolhe o cliente em uma tela própria. O gestor entra direto na rede dele.
 
-Tela 1: visão da rede.
+Tela 1: visão da rede. O cabeçalho mostra o "agora" da ingestão.
 
-Tela 2: detalhe do ambiente, com gráficos interativos.
+Tela 2: detalhe do ambiente, com o gráfico da temperatura, a faixa de conforto e as lacunas.

@@ -17,12 +17,16 @@ async function redis(): Promise<RedisClientType | null> {
   return client;
 }
 
-export async function readVirtualNow(): Promise<Date> {
+export async function readStoredVirtualNow(): Promise<string | null> {
   try {
     const store = await redis();
-    const value = store ? await store.get("system:virtual_now") : null;
-    return value ? new Date(value) : new Date();
+    return store ? await store.get("system:virtual_now") : null;
   } catch {
-    return new Date();
+    return null;
   }
+}
+
+export async function readVirtualNow(): Promise<Date> {
+  const value = await readStoredVirtualNow();
+  return value ? new Date(value) : new Date();
 }

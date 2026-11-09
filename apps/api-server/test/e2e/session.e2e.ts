@@ -32,11 +32,13 @@ describe("GET /api/v1/auth/session", () => {
       headers: { authorization: `Bearer ${ana.accessToken}` },
     });
     expect(operator.status).toBe(200);
-    expect(await operator.json()).toEqual({
+    const operatorBody = (await operator.json()) as { asOf?: string | null };
+    expect(operatorBody).toMatchObject({
       profile: "diel_operator",
       clientId: null,
       clientName: null,
     });
+    expect(operatorBody.asOf === null || typeof operatorBody.asOf === "string").toBe(true);
   });
 });
 

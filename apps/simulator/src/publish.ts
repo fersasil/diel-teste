@@ -16,10 +16,15 @@ export async function publishLines(
   lines: string[],
   publish: (topic: string, payload: string, qos: 1) => Promise<void>,
 ): Promise<number> {
+  let sent = 0;
   for (const line of lines) {
     await publish(TELEMETRY_TOPIC, line, PUBLISH_QOS);
+    sent += 1;
+    if (sent % 1000 === 0) {
+      process.stdout.write(`published ${sent}/${lines.length}\n`);
+    }
   }
-  return lines.length;
+  return sent;
 }
 
 async function main(): Promise<void> {

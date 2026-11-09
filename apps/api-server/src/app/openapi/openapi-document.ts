@@ -34,7 +34,7 @@ export const openApiDocument = {
       },
     },
     "/auth/session": {
-      get: { summary: "Sessão atual", responses: { "200": { description: "perfil, cliente em foco" } } },
+      get: { summary: "Sessão atual", responses: { "200": { description: "perfil, cliente em foco e o agora da ingestão" } } },
     },
     "/auth/focus-client": {
       post: {

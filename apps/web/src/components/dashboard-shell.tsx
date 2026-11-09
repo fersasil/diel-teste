@@ -5,17 +5,20 @@ import { usePathname } from "next/navigation";
 import { useRef, type ReactNode, type WheelEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { formatReadingAt } from "../shared/format";
 import { messages } from "../shared/messages/pt-BR";
 
 export function DashboardShell({
   profileLabel,
   clientName,
   showSwitch,
+  asOf,
   children,
 }: {
   profileLabel: string;
   clientName: string | null;
   showSwitch: boolean;
+  asOf: string | null;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -57,6 +60,11 @@ export function DashboardShell({
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{profileLabel}</p>
             {clientName ? <p className="truncate text-xs text-muted-foreground">{clientName}</p> : null}
+            <p className="truncate text-xs text-muted-foreground">
+              {asOf
+                ? `${messages.virtualNow} ${formatReadingAt(asOf, "America/Sao_Paulo")}`
+                : messages.waitingTelemetry}
+            </p>
           </div>
           {showSwitch ? (
             <a href="/entrar/foco" className="text-sm text-primary">{messages.switchClient}</a>

@@ -5,6 +5,7 @@ export interface SessionBody {
   profile: "diel_operator" | "network_manager" | "store_manager";
   clientId: string | null;
   clientName: string | null;
+  asOf: string | null;
 }
 
 export async function loadSession(token: string): Promise<SessionBody | LoadKind> {

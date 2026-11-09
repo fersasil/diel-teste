@@ -34,6 +34,8 @@ export const messages = {
   segmentLabel: "Segmento",
   emptyClients: "Nenhum cliente neste alcance.",
   productName: "Celsius 360",
+  virtualNow: "Agora",
+  waitingTelemetry: "Aguardando a primeira telemetria",
   operator: "Operador Diel",
   networkManager: "Gestor de rede",
   storeManager: "Gerente de loja",

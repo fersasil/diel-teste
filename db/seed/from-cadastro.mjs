@@ -36,7 +36,7 @@ function json(value) {
 }
 
 const lines = [
-  "-- Generated from data/cadastro.json. Password for every fixture user is change-me.",
+  "-- Generated from data/cadastro.json. password_hash is scrypt, not the example password.",
 ];
 
 lines.push("INSERT INTO clients (id, name, segment) VALUES");
@@ -86,7 +86,7 @@ lines.push(source.usuarios.map((user) => {
     quote(user.id),
     quote(user.nome),
     quote(user.email),
-    quote("change-me"),
+    quote("scrypt:6469656c2d666978747572652d7631:120494ae69867f80321c67e6b696ae9076bee044979168fc42dd4391fb88f51c"),
     quote(profiles[user.perfil]),
     client,
     allowed,

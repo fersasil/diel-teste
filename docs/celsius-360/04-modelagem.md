@@ -6,7 +6,8 @@
 s3://diel-raw-telemetry/
  └── dt=2026-02-10/
       └── hour=23/
-           └── batch_1770767996_w1.jsonl.gz
+           └── client=CLI-001/
+                └── {id}.jsonl.gz
 ```
 
 ## 4.2. Schema PostgreSQL + TimescaleDB
