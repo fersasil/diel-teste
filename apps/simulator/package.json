@@ -1,0 +1,14 @@
+{
+  "name": "simulator",
+  "private": true,
+  "scripts": {
+    "start": "node dist/publish.js"
+  },
+  "dependencies": {
+    "mqtt": "^5.14.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "typescript": "^5.9.3"
+  }
+}

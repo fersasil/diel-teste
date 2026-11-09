@@ -1,0 +1,10 @@
+{
+  "name": "diel",
+  "private": true,
+  "workspaces": [
+    "apps/api-server",
+    "apps/ingestion-worker",
+    "apps/web",
+    "apps/simulator"
+  ]
+}
