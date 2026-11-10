@@ -88,7 +88,7 @@ A web chama a API. A lista junta loja, expediente, faixa e temperatura no Timesc
 
 ### Postgres e TimescaleDB
 
-Cadastro e série ficam no mesmo banco. A lista junta loja, expediente, faixa e temperatura numa consulta SQL. O Timescale entra por causa da série: hypertable por tempo, agregação horária contínua e gapfill no gráfico.
+Cadastro e série ficam no mesmo banco. A lista junta loja, expediente, faixa e temperatura numa consulta SQL. O Timescale entra por causa da série: hypertable por tempo, agregação horária contínua e gapfill no gráfico. A agregação horária refresca a série guardada, do primeiro ao último instante, e não os últimos 30 dias do relógio da máquina.
 
 Prós: uma consulta só, com o cadastro do lado da amostra, e a janela longa no agregado.
 
@@ -104,7 +104,7 @@ Contras: a stream é uma só, e a ingestão cresce até ela encher.
 
 ### MinIO
 
-O cru é arquivo imutável, no formato de objeto do S3. O MinIO é essa API, para o exemplo rodar sem uma conta na nuvem. Cada lote vira um objeto novo, em `dt=AAAA-MM-DD/hour=HH/client=ID/{id}.jsonl.gz`, e não é reescrito.
+O cru é arquivo imutável, no formato de objeto do S3. O MinIO é essa API, para o exemplo rodar sem uma conta na nuvem. Em produção o cru chega a 20 GB por dia. Ele vai para o objeto, um arquivo novo por lote, porque a tela não lê esse volume. A série tratada fica na hypertable e o gráfico longo lê o resumo horário. Cada lote fica em `dt=AAAA-MM-DD/hour=HH/client=ID/{id}.jsonl.gz`, e não é reescrito.
 
 Prós: o JSON cru fica fora da tabela que a tela lê, e o objeto não é reescrito.
 
@@ -134,11 +134,12 @@ O usuário tem perfil. O operador da Diel escolhe um cliente por vez. O gestor v
 
 Online, offline e sem dados usam o "agora" da amostra mais nova. Visto nos últimos 15 minutos, visto antes disso, ou nunca visto.
 
-Uma passagem no arquivo contou `saved_data`, leitura fora de −10 °C a 60 °C e o par dispositivo + timestamp repetido. São 180.951 pacotes. Três casos saem do caminho normal:
+Uma passagem no arquivo contou `saved_data`, leitura fora de −10 °C a 60 °C, o par dispositivo + timestamp repetido e o dispositivo que não está no cadastro. São 180.951 pacotes. Quatro casos saem do caminho normal:
 
 - 247 chegaram atrasados (`saved_data`). A amostra entra no instante calculado. O relógio segue no pacote mais novo.
 - 220 trazem ao menos uma leitura fora de −10 °C a 60 °C. A leitura vira anomalia e fica fora da série.
 - Cerca de 1.100 linhas repetem o mesmo dispositivo no mesmo timestamp. A chave única de ambiente e instante guarda uma amostra e uma anomalia, também quando o arquivo roda de novo.
+- 481 pacotes são do IOT099, que não está no cadastro. A leitura vira anomalia e fica fora da série.
 
 O conforto do período é a fração do expediente em que a temperatura ficou na faixa, no fuso da loja. Cada amostra na faixa cobre 30 segundos, o intervalo do arquivo. Expediente sem leitura pesa no denominador, e o gráfico mostra essa lacuna.
 

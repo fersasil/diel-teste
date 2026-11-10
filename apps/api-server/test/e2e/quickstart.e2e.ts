@@ -4,6 +4,7 @@ import mqtt from "mqtt";
 import { createClient } from "redis";
 import { Client } from "minio";
 import { Pool } from "pg";
+import { restoreDatasetClock } from "./restore-dataset-clock";
 
 const base = process.env.API_BASE_URL;
 const live = base ? describe : describe.skip;
@@ -14,6 +15,7 @@ live("quickstart", () => {
   const password = "change-me";
 
   afterAll(async () => {
+    await restoreDatasetClock(pool);
     await pool.end();
   });
 

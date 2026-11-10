@@ -1,6 +1,7 @@
 import mqtt from "mqtt";
 import { createClient } from "redis";
 import { Pool } from "pg";
+import { restoreDatasetClock } from "./restore-dataset-clock";
 
 const mqttUrl = process.env.MQTT_URL;
 const redisUrl = process.env.REDIS_URL;
@@ -37,9 +38,13 @@ describe("mqtt to redis stream ingest", () => {
     }
     await redis.quit();
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    const row = await waitSample(pool, stamp);
-    await pool.end();
-    expect(row).toBeTruthy();
+    try {
+      const row = await waitSample(pool, stamp);
+      expect(row).toBeTruthy();
+    } finally {
+      await restoreDatasetClock(pool);
+      await pool.end();
+    }
   });
 });
 
