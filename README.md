@@ -78,11 +78,29 @@ O relógio é a chave `system:virtual_now`, o instante da amostra mais nova já 
 
 O ao vivo é um aviso no canal `live:{cliente}`, no máximo um por segundo por ambiente, com temperatura, conforto e status. A API entrega isso no WebSocket `/live` para quem está com a tela daquele cliente aberta. O aviso some se ninguém estiver ouvindo. O que fica guardado é a linha no TimescaleDB.
 
-Dois workers da mesma imagem assinam `$share/ingestion/diel/telemetry`. Cada pacote entra uma vez e o worker enfileira a linha na stream. Os dois consomem essa stream, cada um com nome próprio. O mesmo dispositivo segue numa faixa só dentro do processo. Entre processos, a amostra é única por ambiente e instante, e o relógio virtual só anda para frente.
+## Escolhas
+
+### Postgres e TimescaleDB
+
+Cadastro e série ficam no mesmo banco. A lista junta loja, expediente, faixa e temperatura numa consulta. O Timescale entra com a hypertable, a agregação horária contínua e o gapfill do gráfico. De 1 hora para cima a tela lê o agregado. 15 e 30 minutos leem a amostra.
+
+O ganho é uma consulta só, com o SQL que a API já fala. O limite é essa instância. O cadastro divide o pico da série. Mais workers apressam a ingestão até a escrita desse Postgres encher.
+
+### Redis e MinIO
+
+O worker confirma o MQTT quando a linha entra na stream. O banco recebe o lote, até 2.000 pacotes, num `INSERT` por faixa. O cru vai ao MinIO uma vez, compactado, em `dt=AAAA-MM-DD/hour=HH/client=ID/{id}.jsonl.gz`. O objeto não é reescrito.
+
+A stream desacopla o broker do banco: um pico de atraso espera na fila, e a API continua lendo o agregado. A fila é uma só. Se os consumidores param, no ritmo de 20 GB/dia ela segura poucos minutos. O aviso ao vivo não fica gravado, e o relógio é uma chave. Perder o Redis refaz o "agora" com os pacotes que chegarem depois.
+
+### Dois workers
+
+Os dois usam a mesma imagem e a assinatura `$share/ingestion/diel/telemetry`. O EMQX entrega cada pacote a um. Cada um consome a stream com o próprio nome. Dentro do processo há quatro faixas pelo hash do dispositivo, e a ordem dele se mantém nessa faixa. Entre processos, a chave única de ambiente e instante e o relógio que só avança deixam o resultado certo.
+
+O compose sobe dois para mostrar a réplica. A próxima é a mesma imagem, com outro nome de consumidor. Isso aumenta a ingestão. O teto continua o Postgres e a stream. A conta de 20 GB/dia é a folga de um worker no papel, e não uma medida desta máquina. A réplica só divide a carga dentro do grupo `$share/ingestion`. Fora dele, o broker entrega o pacote a cada processo.
+
+A API fica fora desse caminho. O pico de gravação fica no worker. Ela lê o agregado, o relógio e o aviso.
 
 ## Decisões
-
-O cadastro muda pouco e fica no Postgres. A série cresce com o tempo e fica numa hypertable do TimescaleDB, com agregação horária contínua. O cru é imutável: cada lote vira um objeto novo no MinIO, em `dt=AAAA-MM-DD/hour=HH/client=ID/{id}.jsonl.gz`. Fila, relógio e aviso ao vivo ficam no Redis.
 
 Online, offline e sem dados usam o "agora" da amostra mais nova. Visto nos últimos 15 minutos, visto antes disso, ou nunca visto.
 
