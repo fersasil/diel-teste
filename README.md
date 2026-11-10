@@ -1,5 +1,7 @@
 # Celsius 360
 
+Vídeo: https://www.loom.com/share/ab487129a371418cb1063745bb3b0aa5
+
 Versão reduzida da plataforma de conforto térmico da Diel Energia. Recebe a telemetria dos dispositivos, guarda o cru, calcula o estado da rede e mostra isso na web.
 
 ## Como rodar

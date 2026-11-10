@@ -46,12 +46,14 @@ export class ConsumeService {
     const consumer = workerId();
     while (!this.stopped) {
       try {
+        // Lê do Redis
         const batch = await this.readStaleThenFresh(consumer);
 
         if (batch.length === 0) {
           continue;
         }
 
+        // Processa o batch
         await this.ackAfterIngest(batch);
       } catch (error) {
         this.logger.error({ err: error }, "stream consume failed");
@@ -82,6 +84,7 @@ export class ConsumeService {
 
     this.logger.info({ backlog, count: batch.length }, "ingest batch");
 
+    // Processa o batch
     const accepted = await this.ingest.execute(batch.map((item) => item.payload));
 
     if (accepted) {

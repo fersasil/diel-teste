@@ -59,6 +59,7 @@ export class IngestBatchService {
   // True acknowledges the stream. False keeps the batch pending. Unparsed lines are skipped.
   public async execute(lines: string[]): Promise<boolean> {
     try {
+      // Enriquecimento e classificação
       const prepared = await this.buildSamplesAndAnomalies(lines);
 
       if (prepared.length === 0) {
@@ -66,6 +67,7 @@ export class IngestBatchService {
       }
 
       await this.storeRawLinesByClientHour(prepared);
+
       await this.packets.commit({
         samples: [],
         anomalies: [],
@@ -73,7 +75,10 @@ export class IngestBatchService {
         latests: [],
         virtualNow: null,
       });
+
+      // salva no banco de dados
       await Promise.all(this.groupByDeviceLane(prepared).map((lane) => this.commitLaneSamples(lane)));
+
       await this.publishEnvironmentUpdates(prepared);
       return true;
     } catch (error) {

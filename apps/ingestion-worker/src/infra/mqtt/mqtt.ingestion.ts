@@ -61,6 +61,7 @@ export class MqttIngestion {
   // done() is the PUBACK. Calling it with an error leaves the message with the broker.
   private async enqueueRawAndAck(line: string, done: (error?: Error) => void): Promise<void> {
     try {
+      // Salva no Redis
       const stored = await this.stream.enqueue(line);
 
       if (shouldMqttAck(stored)) {
