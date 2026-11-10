@@ -78,27 +78,25 @@ O relógio é a chave `system:virtual_now`, o instante da amostra mais nova já 
 
 O ao vivo é um aviso no canal `live:{cliente}`, no máximo um por segundo por ambiente, com temperatura, conforto e status. A API entrega isso no WebSocket `/live` para quem está com a tela daquele cliente aberta. O aviso some se ninguém estiver ouvindo. O que fica guardado é a linha no TimescaleDB.
 
-## Escolhas
+A ingestão e a tela são caminhos separados. O simulador publica no EMQX em QoS 1. A assinatura `$share/ingestion/diel/telemetry` entrega cada pacote a um worker, que grava a linha na stream e confirma o MQTT. Os mesmos workers leem essa stream em lotes de até 2.000, cada um com o próprio nome. Dentro do processo, quatro faixas pelo hash do dispositivo mantêm a ordem dele. O lote vira um objeto novo no MinIO, em `dt=AAAA-MM-DD/hour=HH/client=ID/{id}.jsonl.gz`, e um `INSERT` por faixa no TimescaleDB. A API fica fora desse caminho.
 
-### Postgres e TimescaleDB
+A web chama a API. A lista junta loja, expediente, faixa e temperatura no TimescaleDB, no mesmo Postgres do cadastro. De 1 hora para cima o gráfico lê a agregação horária. 15 e 30 minutos leem a amostra, com gapfill. O cabeçalho, o status e o período leem o relógio no Redis.
 
-Cadastro e série ficam no mesmo banco. A lista junta loja, expediente, faixa e temperatura numa consulta. O Timescale entra com a hypertable, a agregação horária contínua e o gapfill do gráfico. De 1 hora para cima a tela lê o agregado. 15 e 30 minutos leem a amostra.
+### Prós
 
-O ganho é uma consulta só, com o SQL que a API já fala. O limite é essa instância. O cadastro divide o pico da série. Mais workers apressam a ingestão até a escrita desse Postgres encher.
+- O pico de gravação fica no worker. Pacote atrasado espera na fila, e a API continua respondendo a lista.
+- O MQTT é confirmado na entrada da stream, antes do `INSERT`. O broker não espera o banco.
+- Outra réplica da mesma imagem, no grupo `$share/ingestion`, aumenta a ingestão. Cada pacote entra uma vez.
+- Cadastro e série no mesmo banco deixam a rede numa consulta.
+- O cru fica imutável no MinIO, fora da tabela que a tela lê.
 
-### Redis e MinIO
+### Contras
 
-O worker confirma o MQTT quando a linha entra na stream. O banco recebe o lote, até 2.000 pacotes, num `INSERT` por faixa. O cru vai ao MinIO uma vez, compactado, em `dt=AAAA-MM-DD/hour=HH/client=ID/{id}.jsonl.gz`. O objeto não é reescrito.
-
-A stream desacopla o broker do banco: um pico de atraso espera na fila, e a API continua lendo o agregado. A fila é uma só. Se os consumidores param, no ritmo de 20 GB/dia ela segura poucos minutos. O aviso ao vivo não fica gravado, e o relógio é uma chave. Perder o Redis refaz o "agora" com os pacotes que chegarem depois.
-
-### Dois workers
-
-Os dois usam a mesma imagem e a assinatura `$share/ingestion/diel/telemetry`. O EMQX entrega cada pacote a um. Cada um consome a stream com o próprio nome. Dentro do processo há quatro faixas pelo hash do dispositivo, e a ordem dele se mantém nessa faixa. Entre processos, a chave única de ambiente e instante e o relógio que só avança deixam o resultado certo.
-
-O compose sobe dois para mostrar a réplica. A próxima é a mesma imagem, com outro nome de consumidor. Isso aumenta a ingestão. O teto continua o Postgres e a stream. A conta de 20 GB/dia é a folga de um worker no papel, e não uma medida desta máquina. A réplica só divide a carga dentro do grupo `$share/ingestion`. Fora dele, o broker entrega o pacote a cada processo.
-
-A API fica fora desse caminho. O pico de gravação fica no worker. Ela lê o agregado, o relógio e o aviso.
+- O teto é um Postgres e uma stream. Mais workers não aliviam esses dois, e o cadastro divide o pico da série.
+- A conta de 20 GB/dia é a folga de um worker no papel. Não foi medida nesta máquina. Com os consumidores parados, a stream segura poucos minutos nesse ritmo.
+- A ordem de um dispositivo vale dentro da faixa do processo. Entre workers, a chave única de ambiente e instante e o relógio que só avança é que deixam o resultado certo.
+- Relógio e ao vivo moram no Redis. Perder o Redis refaz o "agora" com os pacotes seguintes. O aviso some se ninguém está ouvindo.
+- Fora do grupo `$share/ingestion`, cada réplica recebe todos os pacotes.
 
 ## Decisões
 
