@@ -61,7 +61,7 @@ flowchart TB
   w1 -->|enfileira| fila[("Redis Stream<br/>a fila")]
   w2 -->|enfileira| fila
   fila -->|lote de até 2.000| consome["os mesmos workers<br/>consomem a fila"]
-  consome --> minio[("MinIO<br/>pacote cru")]
+  consome --> minio[("MinIO (S3)<br/>pacote cru")]
   consome --> db[("TimescaleDB<br/>cadastro e série")]
 ```
 
@@ -90,7 +90,7 @@ A web chama a API. A lista junta loja, expediente, faixa e temperatura no Timesc
 - O MQTT é confirmado na entrada da stream, antes do `INSERT`. O broker não espera o banco.
 - Outra réplica da mesma imagem, no grupo `$share/ingestion`, aumenta a ingestão. Cada pacote entra uma vez.
 - Cadastro e série no mesmo banco deixam a rede numa consulta.
-- O cru fica imutável no MinIO, fora da tabela que a tela lê.
+- O cru fica imutável no MinIO, um armazenamento compatível com S3, fora da tabela que a tela lê.
 
 ### Contras
 
