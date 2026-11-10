@@ -44,55 +44,68 @@ export class StoreListRepository {
     const pool = getPool();
     const filters = ["s.client_id = $1"];
     const values: unknown[] = [input.clientId, input.virtualNow, input.from, input.to];
+
     if (input.allowedStoreIds) {
       values.push(input.allowedStoreIds);
       filters.push(`s.id = ANY($${values.length}::text[])`);
     }
+
     if (input.storeId) {
       values.push(input.storeId);
       filters.push(`s.id = $${values.length}`);
     }
+
     if (input.query) {
       values.push(input.query);
       filters.push(`s.name ILIKE '%' || $${values.length} || '%' ESCAPE '\\'`);
     }
+
     let envNameIndex = 0;
+
     if (input.environmentName) {
       values.push(input.environmentName);
       envNameIndex = values.length;
       filters.push(`EXISTS (SELECT 1 FROM environments ex WHERE ex.store_id = s.id AND ex.name = $${envNameIndex})`);
     }
+
     if (input.comfortStatus === "NO_DATA") {
       filters.push("e.last_seen_at IS NULL");
     } else if (input.comfortStatus) {
       values.push(input.comfortStatus);
       filters.push(`e.last_seen_at IS NOT NULL AND e.last_comfort_status = $${values.length}`);
     }
+
     const where = filters.join(" AND ");
     const countValues: unknown[] = [input.clientId];
     const countFilters = ["s.client_id = $1"];
+
     if (input.allowedStoreIds) {
       countValues.push(input.allowedStoreIds);
       countFilters.push(`s.id = ANY($${countValues.length}::text[])`);
     }
+
     if (input.storeId) {
       countValues.push(input.storeId);
       countFilters.push(`s.id = $${countValues.length}`);
     }
+
     if (input.query) {
       countValues.push(input.query);
       countFilters.push(`s.name ILIKE '%' || $${countValues.length} || '%' ESCAPE '\\'`);
     }
+
     if (input.environmentName) {
       countValues.push(input.environmentName);
       countFilters.push(`EXISTS (SELECT 1 FROM environments ex WHERE ex.store_id = s.id AND ex.name = $${countValues.length})`);
     }
+
     if (input.comfortStatus === "NO_DATA") {
       countFilters.push(`EXISTS (SELECT 1 FROM environments ex WHERE ex.store_id = s.id AND ex.last_seen_at IS NULL)`);
     } else if (input.comfortStatus) {
       countValues.push(input.comfortStatus);
       countFilters.push(`EXISTS (SELECT 1 FROM environments ex WHERE ex.store_id = s.id AND ex.last_seen_at IS NOT NULL AND ex.last_comfort_status = $${countValues.length})`);
     }
+
     const countWhere = countFilters.join(" AND ");
     const count = await pool.query<{ total: string }>(
       `SELECT COUNT(*)::text AS total FROM stores s WHERE ${countWhere}`,
@@ -202,35 +215,43 @@ export class StoreListRepository {
   }): Promise<Array<{ id: string; name: string }>> {
     const filters = ["s.client_id = $1"];
     const values: unknown[] = [input.clientId];
+
     if (input.allowedStoreIds) {
       values.push(input.allowedStoreIds);
       filters.push(`s.id = ANY($${values.length}::text[])`);
     }
+
     if (input.query) {
       values.push(input.query);
       filters.push(`s.name ILIKE '%' || $${values.length} || '%' ESCAPE '\\'`);
     }
+
     values.push(input.limit);
     const rows = await getPool().query<{ id: string; name: string }>(
       `SELECT s.id, s.name FROM stores s WHERE ${filters.join(" AND ")} ORDER BY s.name LIMIT $${values.length}`,
       values,
     );
     const items = rows.rows;
+
     if (input.selectedId && !items.some((item) => item.id === input.selectedId)) {
       const selectedFilters = ["s.client_id = $1", "s.id = $2"];
       const selectedValues: unknown[] = [input.clientId, input.selectedId];
+
       if (input.allowedStoreIds) {
         selectedValues.push(input.allowedStoreIds);
         selectedFilters.push(`s.id = ANY($${selectedValues.length}::text[])`);
       }
+
       const selected = await getPool().query<{ id: string; name: string }>(
         `SELECT s.id, s.name FROM stores s WHERE ${selectedFilters.join(" AND ")}`,
         selectedValues,
       );
+
       if (selected.rows[0]) {
         items.unshift(selected.rows[0]);
       }
     }
+
     return items;
   }
 }
@@ -239,19 +260,23 @@ function storeOrderSql(sort: StoreListSort | undefined, dir: "ASC" | "DESC"): st
   if (sort === "store") {
     return `s.name ${dir}`;
   }
+
   if (sort === "comfort") {
     return `CASE WHEN COALESCE(p.operating_seconds, 0) = 0 THEN -1
             ELSE LEAST(COALESCE(p.in_range_seconds, 0), p.operating_seconds) / p.operating_seconds END ${dir}, s.name ASC`;
   }
+
   if (sort === "device") {
     return `COUNT(*) FILTER (
               WHERE e.last_seen_at IS NOT NULL
                 AND $2::timestamptz - e.last_seen_at <= INTERVAL '15 minutes'
             ) ${dir}, s.name ASC`;
   }
+
   if (sort === "outOfRange") {
     return `COALESCE(p.out_of_range_envs, 0) ${dir}, s.name ASC`;
   }
+
   return `CASE WHEN COALESCE(p.out_of_range_envs, 0) > 0 THEN 0 ELSE 1 END ASC, s.name ASC`;
 }
 

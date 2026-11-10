@@ -6,5 +6,6 @@ export function scopeClientId(scope: AccessScope): string | null {
   if (scope.profile === "diel_operator") {
     return scope.focusedClientId;
   }
+
   return scope.clientId;
 }

@@ -1,6 +1,8 @@
 import { getPool } from "../../../infra/database/pg-pool";
 import type { ComfortStatus } from "../../../shared/models/cadastro";
 
+export type WeekHours = Partial<Record<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun", string[][]>>;
+
 export interface EnvironmentRow {
   id: string;
   name: string;
@@ -8,6 +10,7 @@ export interface EnvironmentRow {
   storeId: string;
   comfortMin: number;
   comfortMax: number;
+  operatingHours: WeekHours;
   lastTemp: number | null;
   lastComfortStatus: ComfortStatus | null;
   lastSeenAt: Date | null;
@@ -20,17 +23,19 @@ export class EnvironmentRepository {
   async findScoped(id: string, clientId: string): Promise<EnvironmentRow | null> {
     const result = await getPool().query(
       `SELECT e.id, e.name, s.client_id, e.store_id, e.comfort_min, e.comfort_max,
-              e.last_temp, e.last_comfort_status, e.last_seen_at, e.is_currently_operating,
-              s.name AS store_name, s.timezone
+              e.operating_hours, e.last_temp, e.last_comfort_status, e.last_seen_at,
+              e.is_currently_operating, s.name AS store_name, s.timezone
        FROM environments e
        JOIN stores s ON s.id = e.store_id
        WHERE e.id = $1 AND s.client_id = $2`,
       [id, clientId],
     );
     const row = result.rows[0];
+
     if (!row) {
       return null;
     }
+
     return {
       id: row.id,
       name: row.name,
@@ -38,6 +43,7 @@ export class EnvironmentRepository {
       storeId: row.store_id,
       comfortMin: row.comfort_min,
       comfortMax: row.comfort_max,
+      operatingHours: row.operating_hours ?? {},
       lastTemp: row.last_temp,
       lastComfortStatus: row.last_comfort_status,
       lastSeenAt: row.last_seen_at,

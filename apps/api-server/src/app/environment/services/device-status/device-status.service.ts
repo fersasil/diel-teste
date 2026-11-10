@@ -8,9 +8,12 @@ export function deviceStatus(lastSeenAt: Date | null, virtualNow: Date): DeviceS
   if (lastSeenAt === null) {
     return "NO_DATA";
   }
+
   const elapsed = virtualNow.getTime() - lastSeenAt.getTime();
+
   if (elapsed <= ONLINE_MS) {
     return "ONLINE";
   }
+
   return "OFFLINE";
 }

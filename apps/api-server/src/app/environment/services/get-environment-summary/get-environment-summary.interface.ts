@@ -7,6 +7,7 @@ export interface EnvironmentSummary {
   timezone: string;
   comfortMin: number;
   comfortMax: number;
+  operatingHours: EnvironmentRow["operatingHours"];
   lastTemp: number | null;
   lastComfortStatus: EnvironmentRow["lastComfortStatus"];
   deviceStatus: DeviceStatus;

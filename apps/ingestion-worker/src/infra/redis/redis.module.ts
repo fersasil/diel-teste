@@ -1,18 +1,9 @@
 import { Global, Module } from "@nestjs/common";
-import { RedisStore, useRedis } from "./redis";
+import { RedisStore } from "./redis";
 
 @Global()
 @Module({
-  providers: [
-    {
-      provide: RedisStore,
-      useFactory: () => {
-        const store = new RedisStore();
-        useRedis(store);
-        return store;
-      },
-    },
-  ],
+  providers: [RedisStore],
   exports: [RedisStore],
 })
 export class RedisModule {}

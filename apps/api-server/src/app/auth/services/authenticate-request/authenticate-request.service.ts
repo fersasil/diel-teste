@@ -16,18 +16,24 @@ export class AuthenticateRequestGuard implements CanActivate {
       access?: AccessScope;
     }>();
     const header = request.headers.authorization;
+
     if (!header?.startsWith("Bearer ")) {
       throw new UnauthorizedException({ code: "UNAUTHENTICATED" });
     }
+
     const secret = process.env.JWT_SECRET;
+
     if (!secret) {
       throw new UnauthorizedException({ code: "UNAUTHENTICATED" });
     }
+
     try {
       const payload = jwt.verify(header.slice("Bearer ".length), secret);
+
       if (!payload || typeof payload === "string") {
         throw new UnauthorizedException({ code: "UNAUTHENTICATED" });
       }
+
       const userId = typeof payload.sub === "string" ? payload.sub : undefined;
       request.access = {
         profile: payload.profile,
@@ -38,9 +44,11 @@ export class AuthenticateRequestGuard implements CanActivate {
       };
       return true;
     } catch (error) {
+
       if (error instanceof UnauthorizedException) {
         throw error;
       }
+
       throw new UnauthorizedException({ code: "UNAUTHENTICATED" });
     }
   }

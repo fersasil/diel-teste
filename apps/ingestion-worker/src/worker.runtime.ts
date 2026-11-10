@@ -1,42 +1,31 @@
-import { Injectable, OnApplicationShutdown, OnModuleInit } from "@nestjs/common";
-import pino from "pino";
-import { PgPool } from "./infra/database/pg-pool";
-import { MetricsServer } from "./infra/http/metrics.server";
+import { Injectable, type OnApplicationShutdown, type OnModuleInit } from "@nestjs/common";
+import { PinoLogger } from "nestjs-pino";
+import { RunCityWeatherService } from "./app/weather/services/run-city-weather/run-city-weather.service";
 import { MqttIngestion } from "./infra/mqtt/mqtt.ingestion";
-import { RedisStore } from "./infra/redis/redis";
-import { CityWeatherSync } from "./app/weather/services/run-city-weather/city-weather.sync";
-import { StreamConsumer } from "./app/stream/services/consume/stream.consumer";
 
 @Injectable()
 export class WorkerRuntime implements OnModuleInit, OnApplicationShutdown {
-  private readonly log = pino();
+  private stopWeather: (() => void) | undefined;
 
-  constructor(
-    private readonly metrics: MetricsServer,
-    private readonly weather: CityWeatherSync,
+  public constructor(
+    private readonly weather: RunCityWeatherService,
     private readonly mqtt: MqttIngestion,
-    private readonly stream: StreamConsumer,
-    private readonly redis: RedisStore,
-    private readonly database: PgPool,
-  ) {}
+    private readonly logger: PinoLogger,
+  ) {
+    this.logger.setContext(WorkerRuntime.name);
+  }
 
-  async onModuleInit(): Promise<void> {
-    await this.metrics.listen();
+  public async onModuleInit(): Promise<void> {
     try {
-      this.weather.start();
+      this.stopWeather = this.weather.execute().stop;
       await this.mqtt.start();
-      this.stream.start();
     } catch (error) {
-      this.log.error({ err: error }, "ingestion stopped");
+      this.logger.error({ err: error }, "ingestion stopped");
     }
   }
 
-  async onApplicationShutdown(): Promise<void> {
-    this.weather.stop();
+  public async onApplicationShutdown(): Promise<void> {
+    this.stopWeather?.();
     await this.mqtt.stop();
-    await this.stream.stop();
-    await this.redis.close();
-    await this.database.close();
-    await this.metrics.close();
   }
 }

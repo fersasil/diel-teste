@@ -16,14 +16,17 @@ let connecting: Promise<unknown> | undefined;
 
 async function redis(): Promise<RedisClientType | null> {
   const url = process.env.REDIS_URL;
+
   if (!url) {
     return null;
   }
+
   if (!client) {
     client = createClient({ url });
     client.on("error", () => undefined);
     connecting = client.connect();
   }
+
   await connecting;
   return client;
 }
@@ -32,13 +35,17 @@ export async function readStoredVirtualNow(): Promise<string | null> {
   try {
     const store = await redis();
     const cached = store ? await store.get(KEY) : null;
+
     if (cached) {
       return cached;
     }
+
     const stored = await storedVirtualNow();
+
     if (!stored || !store) {
       return stored;
     }
+
     const saved = await store.eval(RESTORE, { keys: [KEY], arguments: [stored] });
     return String(saved);
   } catch {
@@ -50,6 +57,7 @@ async function storedVirtualNow(): Promise<string | null> {
   if (!process.env.DATABASE_URL) {
     return null;
   }
+
   const result = await getPool().query<{ virtual_now: Date }>(
     "SELECT virtual_now FROM virtual_clock WHERE id = 1",
   );

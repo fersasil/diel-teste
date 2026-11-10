@@ -28,6 +28,7 @@ export async function writeRawBatch(
   put: (key: string, body: Buffer) => Promise<void>,
 ): Promise<string> {
   const key = batchObjectKey(packets);
+
   await put(key, await gzipBatch(packets));
   return key;
 }

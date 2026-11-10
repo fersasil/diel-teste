@@ -10,15 +10,18 @@ describe("drain stream", () => {
 
   it("persists a batch in arrival order", async () => {
     const seen: string[] = [];
+
     await drainInOrder(
       [{ id: "1-0", payload: "first" }, { id: "2-0", payload: "second" }],
       async (line) => {
         if (line === "first") {
           await new Promise((resolve) => setTimeout(resolve, 15));
         }
+
         seen.push(line);
         return true;
       },
+
       async () => undefined,
       async () => undefined,
       async () => 1,
@@ -37,15 +40,18 @@ describe("drain stream", () => {
     const acked: string[] = [];
     const dead: string[] = [];
     const fails = new Map<string, number>();
+
     await drainMessages(
       [{ id: "1-0", payload: "ok" }, { id: "2-0", payload: "bad" }],
       async (line) => line === "ok",
       async (id) => {
         acked.push(id);
       },
+
       async (id) => {
         dead.push(id);
       },
+
       async (id) => {
         const next = (fails.get(id) ?? 0) + 1;
         fails.set(id, next);
@@ -61,6 +67,7 @@ describe("drain stream", () => {
       async (id) => {
         dead.push(id);
       },
+
       async () => 6,
     );
     expect(dead).toEqual(["2-0"]);

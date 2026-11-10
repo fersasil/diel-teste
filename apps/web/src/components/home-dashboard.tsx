@@ -1,3 +1,4 @@
+import { marks } from "../brand/tokens";
 import { LiveRefresh } from "./live-refresh";
 import { DeviceStatus } from "./device-status";
 import { environmentCountOf, type DashboardSummary } from "../dashboard/dashboard-summary";
@@ -5,7 +6,6 @@ import { messages } from "../shared/messages/pt-BR";
 import { networkHref } from "../network/network-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 
 export function HomeDashboard({
   token,
@@ -31,12 +31,12 @@ export function HomeDashboard({
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Metric label={messages.storesLabel} value={summary.storeCount} />
         <Metric label={messages.environmentsLabel} value={summary.environmentCount} />
-        <Metric label={messages.inRange} value={summary.inRange} tone="bg-emerald-500" />
-        <Metric label={messages.above} value={summary.above} tone="bg-red-500" />
-        <Metric label={messages.below} value={summary.below} tone="bg-sky-500" />
-        <Metric label={messages.noData} value={summary.noData} tone="bg-slate-300" />
-        <Metric label={messages.online} value={summary.online} tone="bg-emerald-500" />
-        <Metric label={messages.offline} value={summary.offline} tone="bg-slate-300" />
+        <Metric label={messages.inRange} value={summary.inRange} mark={marks.inRange} />
+        <Metric label={messages.above} value={summary.above} mark={marks.above} />
+        <Metric label={messages.below} value={summary.below} mark={marks.below} />
+        <Metric label={messages.noData} value={summary.noData} mark={marks.noData} />
+        <Metric label={messages.online} value={summary.online} mark={marks.inRange} />
+        <Metric label={messages.offline} value={summary.offline} mark={marks.noData} />
       </ul>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2">
@@ -68,13 +68,13 @@ export function HomeDashboard({
   );
 }
 
-function Metric({ label, value, tone }: { label: string; value: number; tone?: string }) {
+function Metric({ label, value, mark }: { label: string; value: number; mark?: string }) {
   return (
     <li>
       <Card>
         <CardContent className="pt-0">
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            {tone ? <span className={cn("size-2 rounded-full", tone)} aria-hidden="true" /> : null}
+            {mark ? <span className="size-2 rounded-full" style={{ backgroundColor: mark }} aria-hidden="true" /> : null}
             {label}
           </p>
           <p className="text-2xl font-semibold tabular-nums">{value}</p>

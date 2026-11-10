@@ -6,6 +6,9 @@ export interface SeriesPoint {
   avgTemp: number | null;
   minTemp: number | null;
   maxTemp: number | null;
+  operatingAvgTemp: number | null;
+  operatingMinTemp: number | null;
+  operatingMaxTemp: number | null;
   isOperatingHours: boolean | null;
 }
 
@@ -18,14 +21,19 @@ export class TimeseriesRepository {
     timezone: string;
   }): Promise<SeriesPoint[]> {
     const interval = bucketInterval(input.bucket);
+
     if (input.bucket !== "30m") {
       return this.fromAggregate(input, interval);
     }
+
     const result = await getPool().query<{
       bucket_start: Date;
       avg_temp: number | null;
       min_temp: number | null;
       max_temp: number | null;
+      operating_avg_temp: number | null;
+      operating_min_temp: number | null;
+      operating_max_temp: number | null;
       is_operating: boolean | null;
     }>(
       `SELECT
@@ -33,6 +41,9 @@ export class TimeseriesRepository {
          AVG(temperature) AS avg_temp,
          MIN(temperature) AS min_temp,
          MAX(temperature) AS max_temp,
+         AVG(temperature) FILTER (WHERE is_operating_hours) AS operating_avg_temp,
+         MIN(temperature) FILTER (WHERE is_operating_hours) AS operating_min_temp,
+         MAX(temperature) FILTER (WHERE is_operating_hours) AS operating_max_temp,
          BOOL_OR(is_operating_hours) AS is_operating
        FROM telemetry_samples
        WHERE environment_id = $1
@@ -55,6 +66,9 @@ export class TimeseriesRepository {
       avg_temp: number | null;
       min_temp: number | null;
       max_temp: number | null;
+      operating_avg_temp: number | null;
+      operating_min_temp: number | null;
+      operating_max_temp: number | null;
       is_operating: boolean | null;
     }>(
       `SELECT
@@ -64,6 +78,11 @@ export class TimeseriesRepository {
            ELSE NULL END AS avg_temp,
          MIN(c.min_temp) AS min_temp,
          MAX(c.max_temp) AS max_temp,
+         CASE WHEN SUM(c.operating_samples) > 0
+           THEN SUM(c.operating_avg_temp * c.operating_samples) / SUM(c.operating_samples)
+           ELSE NULL END AS operating_avg_temp,
+         MIN(c.operating_min_temp) AS operating_min_temp,
+         MAX(c.operating_max_temp) AS operating_max_temp,
          CASE WHEN COUNT(c.bucket_hour) = 0 THEN NULL
               WHEN SUM(c.operating_samples) > 0 THEN TRUE
               ELSE FALSE END AS is_operating
@@ -91,6 +110,9 @@ function toPoint(row: {
   avg_temp: number | null;
   min_temp: number | null;
   max_temp: number | null;
+  operating_avg_temp: number | null;
+  operating_min_temp: number | null;
+  operating_max_temp: number | null;
   is_operating: boolean | null;
 }): SeriesPoint {
   return {
@@ -98,6 +120,9 @@ function toPoint(row: {
     avgTemp: numberOrNull(row.avg_temp),
     minTemp: numberOrNull(row.min_temp),
     maxTemp: numberOrNull(row.max_temp),
+    operatingAvgTemp: numberOrNull(row.operating_avg_temp),
+    operatingMinTemp: numberOrNull(row.operating_min_temp),
+    operatingMaxTemp: numberOrNull(row.operating_max_temp),
     isOperatingHours: row.is_operating,
   };
 }
@@ -106,6 +131,7 @@ function numberOrNull(value: number | string | null): number | null {
   if (value === null || value === undefined) {
     return null;
   }
+
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }

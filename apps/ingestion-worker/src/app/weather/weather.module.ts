@@ -1,10 +1,10 @@
 import { Module } from "@nestjs/common";
-import { DatabaseModule } from "../../infra/database/database.module";
-import { CityWeatherSync } from "./services/run-city-weather/city-weather.sync";
+import { OpenMeteoClient } from "../../infra/open-meteo/open-meteo.client";
+import { WeatherRepository } from "./repositories/weather.repository";
+import { RunCityWeatherService } from "./services/run-city-weather/run-city-weather.service";
 
 @Module({
-  imports: [DatabaseModule],
-  providers: [CityWeatherSync],
-  exports: [CityWeatherSync],
+  providers: [WeatherRepository, OpenMeteoClient, RunCityWeatherService],
+  exports: [RunCityWeatherService],
 })
 export class WeatherModule {}

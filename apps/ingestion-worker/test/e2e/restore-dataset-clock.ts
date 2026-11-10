@@ -28,10 +28,13 @@ export async function restoreDatasetClock(pool: Pool): Promise<void> {
      RETURNING virtual_now`,
   );
   const virtualNow = clock.rows[0]?.virtual_now;
+
   if (!virtualNow || !process.env.REDIS_URL) {
     return;
   }
+
   const store = createClient({ url: process.env.REDIS_URL });
+
   await store.connect();
   await store.set("system:virtual_now", virtualNow.toISOString());
   await store.quit();

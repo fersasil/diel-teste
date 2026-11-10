@@ -1,5 +1,5 @@
+import { marks } from "../brand/tokens";
 import { messages } from "../shared/messages/pt-BR";
-import { cn } from "@/lib/utils";
 
 const labels = {
   ONLINE: messages.online,
@@ -8,15 +8,15 @@ const labels = {
 } as const;
 
 const tones = {
-  ONLINE: "bg-emerald-500",
-  OFFLINE: "bg-slate-300",
-  NO_DATA: "bg-slate-300",
+  ONLINE: marks.inRange,
+  OFFLINE: marks.noData,
+  NO_DATA: marks.noData,
 } as const;
 
 export function DeviceStatus({ status }: { status: keyof typeof labels }) {
   return (
-    <span className={`status status-${status} inline-flex items-center gap-1.5 text-sm`}>
-      <span className={cn("size-2 rounded-full", tones[status])} aria-hidden="true" />
+    <span className={`status status-${status} inline-flex items-center gap-1.5 text-sm text-foreground`}>
+      <span className="size-2 rounded-full" style={{ backgroundColor: tones[status] }} aria-hidden="true" />
       {labels[status]}
     </span>
   );

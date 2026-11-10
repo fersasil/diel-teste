@@ -16,7 +16,7 @@ describe("network page", () => {
     expect(byDevice).toContain("Offline");
     const offline = await readPage(web, "/rede?deviceStatus=OFFLINE", token);
     expect(offline).toContain("Offline");
-    expect(offline).toContain(">Loja Tijuca</h2>");
+    expect(offline).toContain("Nenhuma loja neste alcance.");
     expect(html).toContain("Conforto");
     expect(html).toContain("Dispositivo");
     expect(html).toContain("Loja Tijuca");

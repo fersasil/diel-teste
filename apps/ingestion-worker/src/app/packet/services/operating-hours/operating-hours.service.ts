@@ -32,9 +32,11 @@ export function isOperatingAt(instant: Date, timeZone: string, hours: WeekHours)
   return (hours[day] ?? []).some(([start, end]) => {
     const from = minutes(start);
     const to = minutes(end);
+
     if (to <= from) {
       return now >= from || now < to;
     }
+
     return now >= from && now < to;
   });
 }

@@ -21,9 +21,11 @@ export function startOfLocalDay(day: string, timeZone: string): Date {
 export function daySpan(fromDay: string, toDay: string, timeZone: string): { from: Date; to: Date } | null {
   const from = startOfLocalDay(fromDay, timeZone);
   const to = endOfLocalDay(toDay, timeZone);
+
   if (to < from) {
     return null;
   }
+
   return { from, to };
 }
 
@@ -41,6 +43,7 @@ export function rangeEnd(input: {
   if (input.day) {
     return endOfLocalDay(input.day, input.timeZone);
   }
+
   return input.virtualNow;
 }
 

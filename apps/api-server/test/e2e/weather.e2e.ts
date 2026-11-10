@@ -19,6 +19,7 @@ describe("external weather", () => {
       "SELECT external_temp FROM external_weather WHERE store_id = $1 AND reading_time = $2",
       ["LOJA-RJ-001", stamp],
     );
+
     await pool.query(
       `INSERT INTO external_weather (reading_time, store_id, city, external_temp)
        VALUES ($1, 'LOJA-RJ-001', 'Rio de Janeiro', 31.5)
@@ -42,6 +43,7 @@ describe("external weather", () => {
       expect(index).toBeGreaterThanOrEqual(0);
       expect(body.external[index]?.avgTemp).toBeCloseTo(31.5);
     } finally {
+
       if (previous.rowCount === 0) {
         await pool.query("DELETE FROM external_weather WHERE store_id = $1 AND reading_time = $2", ["LOJA-RJ-001", stamp]);
       } else {
@@ -50,6 +52,7 @@ describe("external weather", () => {
           ["LOJA-RJ-001", stamp, previous.rows[0].external_temp],
         );
       }
+
       await pool.end();
     }
   });

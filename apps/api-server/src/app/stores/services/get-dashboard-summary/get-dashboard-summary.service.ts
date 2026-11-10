@@ -5,9 +5,11 @@ import type { DashboardSummary } from "./get-dashboard-summary.interface";
 
 export function parseAlertLimit(value?: string): number {
   const size = Number(value ?? "10");
+
   if (!Number.isInteger(size) || size <= 0) {
     return 10;
   }
+
   return Math.min(size, 20);
 }
 
@@ -17,6 +19,7 @@ export class GetDashboardSummaryService {
 
   async execute(scope: AccessScope, query: { alertLimit?: string } = {}, virtualNow = new Date()): Promise<DashboardSummary> {
     const clientId = scopeClientId(scope);
+
     if (!clientId) {
       return {
         storeCount: 0,
@@ -32,6 +35,7 @@ export class GetDashboardSummaryService {
         code: "CLIENT_FOCUS_REQUIRED" as const,
       };
     }
+
     const allowedStoreIds = scope.profile === "store_manager" ? scope.allowedStoreIds : null;
     const [totals, alertStores] = await Promise.all([
       this.stores.totals({ clientId, allowedStoreIds, virtualNow }),

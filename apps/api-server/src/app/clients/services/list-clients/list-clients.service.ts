@@ -38,9 +38,11 @@ export class ListClientsService {
     query: { page?: string; pageSize?: string; q?: string; sort?: string; dir?: string },
   ): Promise<ClientPage> {
     const { page, pageSize } = parseClientPage(query);
+
     if (scope.profile !== "diel_operator") {
       return { page, pageSize, total: 0, items: [], code: "FORBIDDEN" };
     }
+
     const { sort, dir } = parseClientSort(query);
     const listed = await this.clients.list({
       query: searchFragment(query.q),

@@ -1,16 +1,26 @@
 import { createHash } from "node:crypto";
+import { Injectable } from "@nestjs/common";
+import { PinoLogger } from "nestjs-pino";
+import { ObjectStore } from "../../../../infra/object-store/object-store";
+import { PublishLiveService } from "../../../clock/services/publish-live/publish-live.service";
+import { VirtualClockService } from "../../../clock/services/virtual-clock/virtual-clock.service";
 import { DeviceRepository, type DeviceRow } from "../../repositories/device.repository";
-import { commitBatch, type AcceptedSample, type BatchAnomaly, type BatchLatest } from "../../repositories/packet.repository";
+import {
+  PacketRepository,
+  type AcceptedSample,
+  type BatchAnomaly,
+  type BatchLatest,
+  type RawBatchRow,
+} from "../../repositories/packet.repository";
 import { comfortStatus } from "../comfort-status/comfort-status.service";
-import { enrichPacket, type Packet } from "../enrich-packet/enrich-packet.service";
+import { enrichPacket, type EnrichedPoint, type Packet } from "../enrich-packet/enrich-packet.service";
 import { isOperatingAt } from "../operating-hours/operating-hours.service";
-import { putRawPart } from "../../../../infra/object-store/object-store";
 import { parsePacket } from "../parse-packet/parse-packet.service";
-import { advanceVirtualNow, noteLive } from "../../../clock/services/virtual-clock/virtual-clock.service";
 
 const PART_BYTES = 4 * 1024 * 1024;
-const LANES = 4;
-const devices = new DeviceRepository();
+const LANE_COUNT = 4;
+const ONLINE_MS = 15 * 60 * 1000;
+type PendingAnomaly = Omit<BatchAnomaly, "rawBatchKey">;
 
 interface Prepared {
   line: string;
@@ -18,197 +28,304 @@ interface Prepared {
   device: DeviceRow | null;
   recordedAt: Date;
   samples: AcceptedSample[];
-  anomalies: Array<Omit<BatchAnomaly, "rawBatchKey">>;
+  anomalies: PendingAnomaly[];
   rawBatchKey: string;
 }
 
+interface RawGroup {
+  items: Prepared[];
+  bytes: number;
+}
+
+// A device always lands on the same lane, so two lanes never write its series at once.
 export function laneOf(deviceId: string): number {
-  const hash = createHash("sha1").update(deviceId).digest();
-  return hash[0] % LANES;
+  return createHash("sha1").update(deviceId).digest()[0] % LANE_COUNT;
 }
 
-export async function persistLine(line: string): Promise<boolean> {
-  return ingestLines([line]);
-}
-
-export async function ingestLines(lines: string[]): Promise<boolean> {
-  try {
-    const prepared = await prepare(lines);
-    if (prepared.length === 0) {
-      return true;
-    }
-    await assignRawParts(prepared);
-    const lanes: Prepared[][] = [[], [], [], []];
-    for (const item of prepared) {
-      lanes[laneOf(item.packet.deviceId)].push(item);
-    }
-    await commitBatch({ samples: [], anomalies: [], rawBatches: rawRows(prepared), latests: [], virtualNow: null });
-    await Promise.all(lanes.filter((lane) => lane.length > 0).map((lane) => commitLane(lane)));
-    await publishLane(prepared);
-    return true;
-  } catch (error) {
-    console.error("sample commit rejected the batch", error);
-    return false;
+@Injectable()
+export class IngestBatchService {
+  public constructor(
+    private readonly devices: DeviceRepository,
+    private readonly packets: PacketRepository,
+    private readonly objects: ObjectStore,
+    private readonly clock: VirtualClockService,
+    private readonly live: PublishLiveService,
+    private readonly logger: PinoLogger,
+  ) {
+    this.logger.setContext(IngestBatchService.name);
   }
-}
 
-async function prepare(lines: string[]): Promise<Prepared[]> {
-  const prepared: Prepared[] = [];
-  for (const line of lines) {
-    const packet = parsePacket(line);
-    if (!packet) {
-      continue;
+  // Durability order: MinIO raw text, object index, samples and anomalies, then live events.
+  // True acknowledges the stream. False keeps the batch pending. Unparsed lines are skipped.
+  public async execute(lines: string[]): Promise<boolean> {
+    try {
+      const prepared = await this.buildSamplesAndAnomalies(lines);
+
+      if (prepared.length === 0) {
+        return true;
+      }
+
+      await this.storeRawLinesByClientHour(prepared);
+      await this.packets.commit({
+        samples: [],
+        anomalies: [],
+        rawBatches: this.indexKnownDeviceRawObjects(prepared),
+        latests: [],
+        virtualNow: null,
+      });
+      await Promise.all(this.groupByDeviceLane(prepared).map((lane) => this.commitLaneSamples(lane)));
+      await this.publishEnvironmentUpdates(prepared);
+      return true;
+    } catch (error) {
+      this.logger.error({ err: error }, "sample commit rejected the batch");
+
+      return false;
     }
-    const device = await devices.findByDeviceId(packet.deviceId);
-    const samples: AcceptedSample[] = [];
-    const anomalies: Array<Omit<BatchAnomaly, "rawBatchKey">> = [];
-    for (const point of enrichPacket(packet)) {
-      if (!device) {
-        anomalies.push({
-          deviceId: packet.deviceId,
+  }
+
+  private async buildSamplesAndAnomalies(lines: string[]): Promise<Prepared[]> {
+    const prepared: Prepared[] = [];
+    for (const line of lines) {
+      const packet = parsePacket(line);
+
+      if (!packet) {
+        continue;
+      }
+
+      const device = await this.devices.findByDeviceId(packet.deviceId);
+      const samples: AcceptedSample[] = [];
+      const anomalies: PendingAnomaly[] = [];
+      for (const point of enrichPacket(packet)) {
+        const classified = this.toSampleOrAnomaly(point, device);
+
+        if (classified.sample) {
+          samples.push(classified.sample);
+        }
+
+        if (classified.anomaly) {
+          anomalies.push(classified.anomaly);
+        }
+      }
+
+      prepared.push({
+        line,
+        packet,
+        device,
+        recordedAt: new Date(packet.timestamp),
+        samples,
+        anomalies,
+        rawBatchKey: "",
+      });
+    }
+
+    return prepared;
+  }
+
+  // Unknown devices and out-of-range temperatures are stored as anomalies, not samples.
+  private toSampleOrAnomaly(point: EnrichedPoint, device: DeviceRow | null): {
+    sample?: AcceptedSample;
+    anomaly?: PendingAnomaly;
+  } {
+    if (!device) {
+      return {
+        anomaly: {
+          deviceId: point.deviceId,
           sampleTime: point.sampleTime,
           temperature: point.temperature,
           reason: "UNKNOWN_DEVICE",
           environmentId: null,
-        });
-        continue;
-      }
-      if (point.kind === "anomaly") {
-        anomalies.push({ ...point, environmentId: device.environmentId });
-        continue;
-      }
-      samples.push({
+        },
+      };
+    }
+
+    if (point.kind === "anomaly") {
+      return {
+        anomaly: {
+          deviceId: point.deviceId,
+          sampleTime: point.sampleTime,
+          temperature: point.temperature,
+          reason: point.reason,
+          environmentId: device.environmentId,
+        },
+      };
+    }
+
+    return {
+      sample: {
         point,
         environmentId: device.environmentId,
         storeId: device.storeId,
         comfortStatus: comfortStatus(point.temperature, device.comfortMin, device.comfortMax),
         isOperatingHours: isOperatingAt(point.sampleTime, device.timezone, device.operatingHours),
-      });
+      },
+    };
+  }
+
+  // Group the original text by client and hour, up to 4 MB, and store each group in MinIO.
+  private async storeRawLinesByClientHour(prepared: Prepared[]): Promise<void> {
+    const groups: RawGroup[] = [];
+    for (const item of prepared) {
+      const bytes = Buffer.byteLength(item.line) + 1;
+      const group = groups.find((candidate) => this.sameClientHourWithinCap(candidate, item, bytes));
+
+      if (!group) {
+        groups.push({ items: [item], bytes });
+        continue;
+      }
+
+      group.items.push(item);
+      group.bytes += bytes;
     }
-    prepared.push({
-      line,
-      packet,
-      device,
-      recordedAt: new Date(packet.timestamp),
+
+    await Promise.all(groups.map(async (group) => {
+      const first = group.items[0];
+      const key = await this.objects.putRawPart(
+        group.items.map((item) => item.line),
+        first.recordedAt,
+        clientIdOrUnknown(first),
+      );
+      for (const item of group.items) {
+        item.rawBatchKey = key;
+      }
+    }));
+  }
+
+  private sameClientHourWithinCap(group: RawGroup, item: Prepared, bytes: number): boolean {
+    const first = group.items[0];
+    return clientIdOrUnknown(first) === clientIdOrUnknown(item)
+      && recordedHourKey(first) === recordedHourKey(item)
+      && group.bytes + bytes <= PART_BYTES;
+  }
+
+  private groupByDeviceLane(prepared: Prepared[]): Prepared[][] {
+    const lanes: Prepared[][] = Array.from({ length: LANE_COUNT }, () => []);
+    for (const item of prepared) {
+      lanes[laneOf(item.packet.deviceId)].push(item);
+    }
+
+    return lanes.filter((lane) => lane.length > 0);
+  }
+
+  private async commitLaneSamples(lane: Prepared[]): Promise<void> {
+    const samples = lane.flatMap((item) => item.samples.map((sample) => ({
+      ...sample,
+      rawBatchKey: item.rawBatchKey,
+    })));
+    const anomalies = lane.flatMap((item) => item.anomalies.map((anomaly) => ({
+      ...anomaly,
+      rawBatchKey: item.rawBatchKey,
+    })));
+
+    await this.packets.commit({
       samples,
       anomalies,
-      rawBatchKey: "",
+      rawBatches: [],
+      latests: this.newestSamplePerEnvironment(lane),
+      virtualNow: this.latestSampleTime(samples),
     });
   }
-  return prepared;
-}
 
-async function assignRawParts(prepared: Prepared[]): Promise<void> {
-  const groups: Prepared[][] = [];
-  const sizes: number[] = [];
-  for (const item of prepared) {
-    const clientId = item.device?.clientId ?? "unknown";
-    const hour = item.recordedAt.toISOString().slice(0, 13);
-    const size = Buffer.byteLength(item.line) + 1;
-    const index = groups.findIndex((group, groupIndex) => {
-      const first = group[0];
-      const sameClient = (first.device?.clientId ?? "unknown") === clientId;
-      return sameClient
-        && first.recordedAt.toISOString().slice(0, 13) === hour
-        && sizes[groupIndex] + size <= PART_BYTES;
-    });
-    if (index < 0) {
-      groups.push([item]);
-      sizes.push(size);
-      continue;
+  // Written before the samples so the key exists. Unknown devices stay out of the index.
+  private indexKnownDeviceRawObjects(prepared: Prepared[]): RawBatchRow[] {
+    const counts = new Map<string, RawBatchRow>();
+    for (const item of prepared) {
+
+      if (!item.device || !item.rawBatchKey) {
+        continue;
+      }
+
+      const current = counts.get(item.rawBatchKey);
+
+      if (current) {
+        current.packetCount += 1;
+        continue;
+      }
+
+      counts.set(item.rawBatchKey, {
+        key: item.rawBatchKey,
+        clientId: item.device.clientId,
+        recordedAt: item.recordedAt,
+        packetCount: 1,
+      });
     }
-    groups[index].push(item);
-    sizes[index] += size;
+
+    return [...counts.values()];
   }
-  await Promise.all(groups.map(async (group) => {
-    const clientId = group[0].device?.clientId ?? "unknown";
-    const key = await putRawPart(group.map((item) => item.line), group[0].recordedAt, clientId);
-    for (const item of group) {
-      item.rawBatchKey = key;
-    }
-  }));
-}
 
-async function commitLane(lane: Prepared[]): Promise<void> {
-  const samples = lane.flatMap((item) => item.samples.map((sample) => ({ ...sample, rawBatchKey: item.rawBatchKey })));
-  const anomalies = lane.flatMap((item) => item.anomalies.map((anomaly) => ({ ...anomaly, rawBatchKey: item.rawBatchKey })));
-  await commitBatch({
-    samples,
-    anomalies,
-    rawBatches: [],
-    latests: winners(lane),
-    virtualNow: newestSample(samples),
-  });
-}
+  private latestSampleTime(samples: Array<{ point: { sampleTime: Date } }>): Date | null {
+    return samples.reduce<Date | null>((max, sample) => {
+      const time = sample.point.sampleTime;
+      return !max || time > max ? time : max;
+    }, null);
 
-function rawRows(lane: Prepared[]): Array<{ key: string; clientId: string; recordedAt: Date; packetCount: number }> {
-  const counts = new Map<string, { clientId: string; recordedAt: Date; packetCount: number }>();
-  for (const item of lane) {
-    if (!item.device || !item.rawBatchKey) {
-      continue;
-    }
-    const current = counts.get(item.rawBatchKey);
-    if (current) {
-      current.packetCount += 1;
-      continue;
-    }
-    counts.set(item.rawBatchKey, { clientId: item.device.clientId, recordedAt: item.recordedAt, packetCount: 1 });
   }
-  return [...counts.entries()].map(([key, row]) => ({ key, ...row }));
+
+  // Readings run oldest to newest, so the last sample of a packet is the one the screen shows.
+  private newestSamplePerEnvironment(prepared: Prepared[]): BatchLatest[] {
+    const latest = new Map<string, BatchLatest>();
+    for (const item of prepared) {
+      const sample = item.samples.at(-1);
+
+      if (!item.device || !sample) {
+        continue;
+      }
+
+      const current = latest.get(sample.environmentId);
+
+      if (current && current.sample.point.sampleTime >= sample.point.sampleTime) {
+        continue;
+      }
+
+      latest.set(sample.environmentId, {
+        sample,
+        operatingNow: isOperatingAt(sample.point.sampleTime, item.device.timezone, item.device.operatingHours),
+      });
+    }
+
+    return [...latest.values()];
+  }
+
+  // Live events leave only after the database accepts the batch.
+  private async publishEnvironmentUpdates(prepared: Prepared[]): Promise<void> {
+    const latest = this.newestSamplePerEnvironment(prepared);
+
+    if (latest.length === 0) {
+      return;
+    }
+
+    const newest = latest.reduce(
+      (max, item) => (item.sample.point.sampleTime > max ? item.sample.point.sampleTime : max),
+      latest[0].sample.point.sampleTime,
+    );
+    const virtualNow = new Date(await this.clock.execute(newest));
+    const shown = new Set(latest.map((item) => item.sample));
+    for (const item of prepared) {
+      const sample = item.samples.at(-1);
+
+      if (!item.device || !sample || !shown.has(sample)) {
+        continue;
+      }
+
+      const ageMs = virtualNow.getTime() - sample.point.sampleTime.getTime();
+      this.live.execute(item.device.clientId, sample.environmentId, {
+        type: "environment.updated",
+        environmentId: sample.environmentId,
+        storeId: sample.storeId,
+        lastTemp: sample.point.temperature,
+        latestAt: sample.point.sampleTime.toISOString(),
+        lastComfortStatus: sample.comfortStatus,
+        deviceStatus: ageMs <= ONLINE_MS ? "ONLINE" : "OFFLINE",
+        isCurrentlyOperating: isOperatingAt(virtualNow, item.device.timezone, item.device.operatingHours),
+        virtualNow: virtualNow.toISOString(),
+      });
+    }
+  }
 }
 
-function newestSample(samples: Array<{ point: { sampleTime: Date } }>): Date | null {
-  return samples.reduce<Date | null>((max, sample) => {
-    const time = sample.point.sampleTime;
-    return !max || time > max ? time : max;
-  }, null);
+function clientIdOrUnknown(item: Prepared): string {
+  return item.device?.clientId ?? "unknown";
 }
 
-function winners(lane: Prepared[]): BatchLatest[] {
-  const latest = new Map<string, BatchLatest>();
-  for (const item of lane) {
-    const sample = item.samples.at(-1);
-    if (!item.device || !sample) {
-      continue;
-    }
-    const current = latest.get(sample.environmentId);
-    if (current && current.sample.point.sampleTime >= sample.point.sampleTime) {
-      continue;
-    }
-    latest.set(sample.environmentId, {
-      sample,
-      operatingNow: isOperatingAt(sample.point.sampleTime, item.device.timezone, item.device.operatingHours),
-    });
-  }
-  return [...latest.values()];
-}
-
-async function publishLane(prepared: Prepared[]): Promise<void> {
-  const latests = winners(prepared);
-  if (latests.length === 0) {
-    return;
-  }
-  const newest = latests.reduce((max, item) => item.sample.point.sampleTime > max ? item.sample.point.sampleTime : max, latests[0].sample.point.sampleTime);
-  const virtualNow = new Date(await advanceVirtualNow(newest));
-  for (const item of prepared) {
-    const sample = item.samples.at(-1);
-    if (!item.device || !sample) {
-      continue;
-    }
-    const chosen = latests.find((latest) => latest.sample.environmentId === sample.environmentId);
-    if (!chosen || chosen.sample !== sample) {
-      continue;
-    }
-    noteLive(item.device.clientId, sample.environmentId, {
-      type: "environment.updated",
-      environmentId: sample.environmentId,
-      storeId: sample.storeId,
-      lastTemp: sample.point.temperature,
-      latestAt: sample.point.sampleTime.toISOString(),
-      lastComfortStatus: sample.comfortStatus,
-      deviceStatus: virtualNow.getTime() - sample.point.sampleTime.getTime() <= 15 * 60 * 1000 ? "ONLINE" : "OFFLINE",
-      isCurrentlyOperating: isOperatingAt(virtualNow, item.device.timezone, item.device.operatingHours),
-      virtualNow: virtualNow.toISOString(),
-    });
-  }
+function recordedHourKey(item: Prepared): string {
+  return item.recordedAt.toISOString().slice(0, 13);
 }

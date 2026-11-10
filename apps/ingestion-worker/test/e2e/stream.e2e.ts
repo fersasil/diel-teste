@@ -22,20 +22,25 @@ describe("mqtt to redis stream ingest", () => {
     const published = await publish(JSON.stringify(payload));
     expect(published).toBe(true);
     const redis = createClient({ url: redisUrl });
+
     await redis.connect();
     const stream = process.env.REDIS_STREAM_KEY ?? "telemetry:stream";
     let pending = 1;
     for (let attempt = 0; attempt < 40; attempt += 1) {
       const info = await redis.xPending(stream, process.env.REDIS_CONSUMER_GROUP ?? "telemetry_cg");
       pending = Number(info.pending ?? info);
+
       if (Number.isNaN(pending)) {
         pending = 0;
       }
+
       if (pending === 0) {
         break;
       }
+
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
+
     await redis.quit();
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     try {
@@ -55,11 +60,13 @@ function publish(line: string): Promise<boolean> {
       client.end(true);
       resolve(false);
     }, 8000);
+
     client.once("error", () => {
       clearTimeout(timer);
       client.end(true);
       resolve(false);
     });
+
     client.once("connect", () => {
       client.publish("diel/telemetry", line, { qos: 1 }, (error) => {
         clearTimeout(timer);
@@ -76,10 +83,13 @@ async function waitSample(pool: Pool, stamp: string) {
       "SELECT 1 FROM telemetry_samples WHERE sample_time = $1::timestamptz LIMIT 1",
       [stamp],
     );
+
     if (result.rowCount) {
       return result.rows[0];
     }
+
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
+
   return null;
 }

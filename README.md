@@ -94,6 +94,18 @@ Prós: uma consulta só, com o cadastro do lado da amostra, e a janela longa no 
 
 Contras: gravar telemetria e abrir a lista usam o mesmo Postgres. Se a escrita aperta, a tela sente. O gráfico de 1 hora ou mais lê o resumo já calculado. O de 30 minutos lê as amostras, porque a ficha de uma hora não se parte ao meio.
 
+### SQL direto, sem ORM
+
+O acesso ao banco é o driver `pg`. O repository escreve a query e devolve o model. A migration é um arquivo SQL em `db/migrations`.
+
+O Timescale pede esse SQL: hypertable, agregação contínua, compressão e `time_bucket_gapfill`. Um ORM genérico não descreve isso. O que sobra vira SQL cru ao lado do mapeamento.
+
+O cadastro fica no mesmo caminho. Cliente, loja, usuário e ambiente moram no mesmo Postgres da série. A lista junta os dois numa consulta: filtro, ordenação, paginação e o estado `last_*` do ambiente. A gravação do lote faz o inverso na mesma transação: amostra, anomalia, lote cru e o `UPDATE` de `environments.last_*`. Um ORM só para o cadastro cobriria o login e poucas leituras. A consulta com meta de tempo e a transação do lote continuariam escritas à mão, e o schema continuaria na migration, porque a hypertable e a agregação contínua nascem ali.
+
+Prós: uma forma de ler e gravar. A consulta da lista fica visível. A transação do lote usa um cliente só.
+
+Contras: cada query nova é SQL, e a linha vira model na mão.
+
 ### Redis
 
 A fila, o cache do relógio e o aviso ao vivo são três usos de naturezas diferentes, e os três cabem num processo que a ingestão já atravessa. A stream segura o pacote até o lote ser gravado. A chave `system:virtual_now` evita uma ida ao banco em toda página. O canal `live:{cliente}` empurra a leitura para quem está com a tela aberta.

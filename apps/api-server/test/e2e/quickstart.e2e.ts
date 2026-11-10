@@ -42,11 +42,13 @@ live("quickstart", () => {
         client.end(true);
         resolve(false);
       }, 4000);
+
       client.once("error", () => {
         clearTimeout(timer);
         client.end(true);
         resolve(false);
       });
+
       client.once("connect", () => {
         client.publish("diel/telemetry", JSON.stringify(payload), { qos: 1 }, (error) => {
           clearTimeout(timer);
@@ -60,11 +62,14 @@ live("quickstart", () => {
   async function waitRow(sql: string, values: unknown[]) {
     for (let attempt = 0; attempt < 40; attempt += 1) {
       const result = await pool.query(sql, values);
+
       if (result.rowCount) {
         return result.rows[0] as Record<string, unknown>;
       }
+
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
+
     return null;
   }
 
@@ -72,13 +77,16 @@ live("quickstart", () => {
     for (let attempt = 0; attempt < 30; attempt += 1) {
       try {
         const probe = await fetch(`${base}/api/v1/stores`);
+
         if (probe.status > 0) {
           break;
         }
+
       } catch {
         await new Promise((resolveWait) => setTimeout(resolveWait, 500));
       }
     }
+
     const copy = readFileSync(resolve(__dirname, "../../../web/src/shared/messages/pt-BR.ts"), "utf8");
     expect(copy).toContain("E-mail ou senha inválidos.");
     expect(copy).toContain("Visão da rede");
@@ -101,10 +109,12 @@ live("quickstart", () => {
 
     if (process.env.REDIS_URL) {
       const clock = createClient({ url: process.env.REDIS_URL });
+
       await clock.connect();
       await clock.del("operator:focus:USR-001");
       await clock.quit();
     }
+
     const operator = await login("ana.ribeiro@diel.example");
     const unfocused = await authed(operator.body.accessToken, "/api/v1/stores");
     expect(await unfocused.json()).toMatchObject({ items: [], code: "CLIENT_FOCUS_REQUIRED" });
@@ -132,6 +142,7 @@ live("quickstart", () => {
       readings: [22],
       savedData: false,
     });
+
     await fetch(`${worker}/test/object-store`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -228,15 +239,18 @@ live("quickstart", () => {
       secretKey: process.env.MINIO_ROOT_PASSWORD ?? "change-me",
     });
     const objects: string[] = [];
+
     await new Promise<void>((resolve, reject) => {
       const stream = store.listObjectsV2(process.env.MINIO_BUCKET ?? "diel-raw-telemetry", "dt=2026-04-02/", true);
       stream.on("data", (item: { name: string }) => objects.push(item.name));
       stream.on("end", () => resolve());
       stream.on("error", reject);
     });
+
     expect(objects.some((name) => name.endsWith(".jsonl.gz"))).toBe(true);
 
     const started = Date.now();
+
     await pool.query("SELECT id FROM stores WHERE client_id = $1", ["CLI-001"]);
     expect(Date.now() - started).toBeLessThan(30);
     const open = await authed(manager.body.accessToken, "/api/v1/stores");

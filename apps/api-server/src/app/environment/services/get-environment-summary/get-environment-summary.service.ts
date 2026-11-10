@@ -14,6 +14,7 @@ export function summarizeScoped(
   if (!environment) {
     return { code: "NOT_FOUND" };
   }
+
   return summarize(environment, virtualNow, operatingSeconds, inRangeSeconds);
 }
 
@@ -29,6 +30,7 @@ export function summarize(
     timezone: environment.timezone,
     comfortMin: environment.comfortMin,
     comfortMax: environment.comfortMax,
+    operatingHours: environment.operatingHours,
     lastTemp: environment.lastTemp,
     lastComfortStatus: environment.lastComfortStatus,
     deviceStatus: deviceStatus(environment.lastSeenAt, virtualNow),

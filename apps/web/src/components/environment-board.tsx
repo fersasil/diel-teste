@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { browserApiBase } from "../shared/api-base";
+import type { WeekHours } from "../shared/format";
 import { detailHref } from "../network/detail-href";
 import { kindFromStatus, type LoadKind } from "../shared/load-state";
 import { messages } from "../shared/messages/pt-BR";
@@ -17,6 +19,9 @@ interface ChartPoint {
   avgTemp: number | null;
   minTemp: number | null;
   maxTemp: number | null;
+  operatingAvgTemp: number | null;
+  operatingMinTemp: number | null;
+  operatingMaxTemp: number | null;
   isOperatingHours: boolean | null;
 }
 
@@ -28,6 +33,9 @@ interface SeriesBody {
     avgTemp: number | null;
     minTemp: number | null;
     maxTemp: number | null;
+    operatingAvgTemp: number | null;
+    operatingMinTemp: number | null;
+    operatingMaxTemp: number | null;
     isOperatingHours: boolean | null;
   }>;
   external?: Array<{ avgTemp: number | null }>;
@@ -57,6 +65,7 @@ export function EnvironmentBoard({
   timezone,
   comfortMin,
   comfortMax,
+  operatingHours,
   comfortPercent,
   lastTemp,
   latestAt,
@@ -64,6 +73,7 @@ export function EnvironmentBoard({
   points,
   external,
   failed,
+  onlyOperating: onlyOperatingInitial,
 }: {
   id: string;
   token: string;
@@ -76,6 +86,7 @@ export function EnvironmentBoard({
   timezone: string;
   comfortMin: number;
   comfortMax: number;
+  operatingHours: WeekHours;
   comfortPercent: number | null;
   lastTemp: number | null;
   latestAt: string | null;
@@ -83,6 +94,7 @@ export function EnvironmentBoard({
   points: ChartPoint[];
   external: Array<{ avgTemp: number | null }>;
   failed: boolean;
+  onlyOperating: boolean;
 }) {
   const [fromDay, setFromDay] = useState(from);
   const [toDay, setToDay] = useState(to);
@@ -92,6 +104,7 @@ export function EnvironmentBoard({
   const [seriesPoints, setSeriesPoints] = useState(points);
   const [seriesExternal, setSeriesExternal] = useState(external);
   const [seriesFailed, setSeriesFailed] = useState(failed);
+  const [onlyOperating, setOnlyOperating] = useState(onlyOperatingInitial);
   const [reading, setReading] = useState({ temp: lastTemp, at: latestAt, status: deviceStatus });
   const [loading, setLoading] = useState(false);
   const patches = useLivePatches(token);
@@ -150,6 +163,9 @@ export function EnvironmentBoard({
         avgTemp: point.avgTemp,
         minTemp: point.minTemp,
         maxTemp: point.maxTemp,
+        operatingAvgTemp: point.operatingAvgTemp ?? null,
+        operatingMinTemp: point.operatingMinTemp ?? null,
+        operatingMaxTemp: point.operatingMaxTemp ?? null,
         isOperatingHours: point.isOperatingHours,
       })));
       setSeriesFailed(false);
@@ -171,6 +187,7 @@ export function EnvironmentBoard({
         comfortPercent={percent}
         comfortMin={comfortMin}
         comfortMax={comfortMax}
+        operatingHours={operatingHours}
         lastTemp={reading.temp}
         latestAt={reading.at}
         timezone={timezone}
@@ -180,25 +197,54 @@ export function EnvironmentBoard({
         <div className="mb-4 flex flex-wrap items-end gap-x-6 gap-y-3">
           <div>
             <p className="mb-1 text-xs font-medium text-muted-foreground">{messages.periodLabel}</p>
-            <PeriodNav current={custom ? null : period} hrefFor={(next) => detailHref(id, next, bucket)} />
+            <PeriodNav current={custom ? null : period} hrefFor={(next) => detailHref(id, next, bucket, { operating: onlyOperating })} />
           </div>
           <ChartDate from={fromDay} to={toDay} max={max} onChange={(start, end) => void selectRange(start, end)} />
           <div>
             <p className="mb-1 text-xs font-medium text-muted-foreground">{messages.bucket}</p>
             <nav className="buckets flex flex-wrap gap-2">
               {buckets.map(([value, label]) => (
-                <a
+                <Link
                   key={value}
-                  href={detailHref(id, period, value, custom ? { from: fromDay, to: toDay } : undefined)}
+                  href={detailHref(id, period, value, {
+                    ...(custom ? { from: fromDay, to: toDay } : {}),
+                    operating: onlyOperating,
+                  })}
+                  scroll={false}
                   aria-current={bucket === value ? "page" : undefined}
                   className={bucket === value
                     ? "inline-flex h-8 items-center rounded-lg bg-primary px-3 text-sm text-primary-foreground"
                     : "inline-flex h-8 items-center rounded-lg bg-background px-3 text-sm ring-1 ring-foreground/10"}
                 >
                   {label}
-                </a>
+                </Link>
               ))}
             </nav>
+          </div>
+          <div>
+            <p className="mb-1 text-xs font-medium text-muted-foreground">{messages.hoursLabel}</p>
+            <button
+              type="button"
+              aria-pressed={onlyOperating}
+              onClick={() => {
+                setOnlyOperating((current) => {
+                  const next = !current;
+                  const address = new URLSearchParams(window.location.search);
+                  if (next) {
+                    address.set("hours", "expediente");
+                  } else {
+                    address.delete("hours");
+                  }
+                  window.history.replaceState(null, "", `/ambientes/${id}?${address}`);
+                  return next;
+                });
+              }}
+              className={onlyOperating
+                ? "inline-flex h-8 items-center rounded-lg bg-primary px-3 text-sm text-primary-foreground"
+                : "inline-flex h-8 items-center rounded-lg bg-background px-3 text-sm ring-1 ring-foreground/10"}
+            >
+              {messages.onlyOperating}
+            </button>
           </div>
         </div>
         {seriesFailed ? (
@@ -214,6 +260,7 @@ export function EnvironmentBoard({
               comfortMax={band.max}
               timezone={timezone}
               showTime={bucket === "30m" || bucket === "1h"}
+              onlyOperating={onlyOperating}
               external={seriesExternal}
               points={seriesPoints}
             />

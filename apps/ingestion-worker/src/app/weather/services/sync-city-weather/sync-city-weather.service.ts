@@ -12,17 +12,22 @@ export async function syncCityWeather(deps: {
 }): Promise<{ stores: number; hours: number; failed: number }> {
   const span = await deps.span();
   const stores = span ? await deps.stores() : [];
+
   if (!span || stores.length === 0) {
     return { stores: 0, hours: 0, failed: 0 };
   }
+
   const cached = new Map<string, CityReading[] | null>();
   let hours = 0;
   let failed = 0;
   for (const store of stores) {
+
     if (weatherCovers(span, { from: store.coveredFrom, to: store.coveredTo })) {
       continue;
     }
+
     const key = `${store.latitude.toFixed(4)},${store.longitude.toFixed(4)}`;
+
     if (!cached.has(key)) {
       try {
         cached.set(key, await deps.fetchCity(store, span.from, span.to));
@@ -30,12 +35,16 @@ export async function syncCityWeather(deps: {
         cached.set(key, null);
       }
     }
+
     const readings = cached.get(key);
+
     if (!readings) {
       failed += 1;
       continue;
     }
+
     hours += await deps.save(store.id, store.city, readings);
   }
+
   return { stores: stores.length, hours, failed };
 }

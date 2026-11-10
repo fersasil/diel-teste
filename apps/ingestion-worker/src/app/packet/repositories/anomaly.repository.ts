@@ -1,7 +1,11 @@
-import { getPool } from "../../../infra/database/pg-pool";
+import { Injectable } from "@nestjs/common";
+import { PgPool } from "../../../infra/database/pg-pool";
 
+@Injectable()
 export class AnomalyRepository {
-  async insert(input: {
+  public constructor(private readonly database: PgPool) {}
+
+  public async insert(input: {
     detectedAt: Date;
     deviceId: string;
     environmentId: string | null;
@@ -9,7 +13,7 @@ export class AnomalyRepository {
     reason: "OUT_OF_RANGE" | "UNKNOWN_DEVICE";
     rawBatchKey: string | null;
   }): Promise<void> {
-    await getPool().query(
+    await this.database.get().query(
       `INSERT INTO telemetry_anomalies (
          detected_at, dev_id, environment_id, raw_value, reason, raw_batch_key
        ) VALUES ($1,$2,$3,$4,$5,$6)

@@ -22,9 +22,11 @@ export class AuthController {
   @Post("login")
   async login(@Body() body: { email?: string; password?: string }) {
     const result = await this.loginService.execute(body.email ?? "", body.password ?? "");
+
     if ("code" in result) {
       throw new UnauthorizedException({ code: result.code });
     }
+
     return result;
   }
 
@@ -37,10 +39,13 @@ export class AuthController {
     if (request.access.profile !== "diel_operator") {
       throw new ForbiddenException({ code: "FORBIDDEN" });
     }
+
     const focused = await this.focusService.execute(request.access.userId ?? "operator", body.clientId ?? "");
+
     if ("code" in focused) {
       throw new NotFoundException({ code: focused.code });
     }
+
     return focused;
   }
 }

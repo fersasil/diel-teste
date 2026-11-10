@@ -19,9 +19,11 @@ export class UserRepository {
       [email],
     );
     const row = result.rows[0];
+
     if (!row) {
       return null;
     }
+
     return {
       id: row.id,
       name: row.name,

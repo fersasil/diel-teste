@@ -20,19 +20,24 @@ export function parsePacket(line: string): Packet | null {
   } catch {
     return null;
   }
+
   const deviceId = raw.deviceId ?? raw.dev_id;
   const readings = raw.readings ?? raw.Temperature;
   const timestamp = raw.timestamp;
   const intervalSeconds = raw.intervalSeconds ?? raw.samplingTime;
+
   if (!deviceId || !timestamp || !readings?.length || !intervalSeconds || intervalSeconds <= 0) {
     return null;
   }
+
   const utc = raw.deviceId
     ? new Date(timestamp)
     : new Date(Date.parse(`${timestamp}Z`) - Number(raw.GMT ?? 0) * 3_600_000);
+
   if (Number.isNaN(utc.getTime())) {
     return null;
   }
+
   return {
     deviceId,
     timestamp: utc.toISOString(),

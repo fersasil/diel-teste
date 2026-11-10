@@ -21,13 +21,16 @@ describe("GET /api/v1/stores", () => {
     for (let attempt = 0; attempt < 30; attempt += 1) {
       try {
         const probe = await fetch(`${base}/api/v1/stores`);
+
         if (probe.status > 0) {
           break;
         }
+
       } catch {
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
     }
+
     const started = Date.now();
     const response = await fetch(`${base}/api/v1/stores`, {
       headers: { authorization: `Bearer ${token}` },

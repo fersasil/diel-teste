@@ -20,6 +20,7 @@ describe("sync city weather", () => {
         fetched.push(place.id);
         return [{ readingTime: span.from, temperature: 24 }];
       },
+
       save: async (id) => {
         saved.push(id);
         return 1;
@@ -39,8 +40,10 @@ describe("sync city weather", () => {
         if (place.id === "LOJA-RJ-001") {
           throw new Error("down");
         }
+
         return [{ readingTime: span.from, temperature: 29 }];
       },
+
       save: async (id) => {
         saved.push(id);
         return 2;

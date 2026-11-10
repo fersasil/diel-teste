@@ -1,7 +1,9 @@
 import { Module } from "@nestjs/common";
-import { RedisModule } from "../../infra/redis/redis.module";
+import { PublishLiveService } from "./services/publish-live/publish-live.service";
+import { VirtualClockService } from "./services/virtual-clock/virtual-clock.service";
 
 @Module({
-  imports: [RedisModule],
+  providers: [VirtualClockService, PublishLiveService],
+  exports: [VirtualClockService, PublishLiveService],
 })
 export class ClockModule {}

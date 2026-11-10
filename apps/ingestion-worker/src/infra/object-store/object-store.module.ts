@@ -1,18 +1,9 @@
 import { Global, Module } from "@nestjs/common";
-import { ObjectStore, useObjectStore } from "./object-store";
+import { ObjectStore } from "./object-store";
 
 @Global()
 @Module({
-  providers: [
-    {
-      provide: ObjectStore,
-      useFactory: () => {
-        const store = new ObjectStore();
-        useObjectStore(store);
-        return store;
-      },
-    },
-  ],
+  providers: [ObjectStore],
   exports: [ObjectStore],
 })
 export class ObjectStoreModule {}

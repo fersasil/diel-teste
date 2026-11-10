@@ -11,6 +11,7 @@ export async function consumeBatch(
   for (const packet of packets) {
     enrichPacket(packet);
   }
+
   let objectStored = false;
   let samplesCommitted = false;
   try {
@@ -21,5 +22,6 @@ export async function consumeBatch(
   } catch {
     return { acked: false };
   }
+
   return { acked: shouldAck(objectStored, samplesCommitted) };
 }

@@ -92,6 +92,12 @@ export const openApiDocument = {
         responses: { "200": { description: "pontos, lacunas e temperatura externa" } },
       },
     },
+    "/intake": {
+      get: {
+        summary: "Entrada de telemetria, só para o operador Diel, sem cliente em foco",
+        responses: { "200": { description: "pacotes gravados, leituras e dispositivos sem cadastro" }, "403": { description: "FORBIDDEN" } },
+      },
+    },
     "/storage/raw-batches": {
       get: {
         summary: "Lotes crus do dia",

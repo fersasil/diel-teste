@@ -10,10 +10,12 @@ export function countEnvironments(environments: CountedEnvironment[]): StoreCoun
     noDataCount: 0,
   };
   for (const environment of environments) {
+
     if (environment.lastSeenAt === null) {
       counts.noDataCount += 1;
       continue;
     }
+
     if (environment.lastComfortStatus === "IN_RANGE") {
       counts.inRangeCount += 1;
     } else if (environment.lastComfortStatus === "ABOVE") {
@@ -22,5 +24,6 @@ export function countEnvironments(environments: CountedEnvironment[]): StoreCoun
       counts.belowCount += 1;
     }
   }
+
   return counts;
 }

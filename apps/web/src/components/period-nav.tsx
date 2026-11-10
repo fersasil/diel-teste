@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { messages } from "../shared/messages/pt-BR";
 import type { NetworkPeriod } from "../network/network-query";
 
@@ -17,16 +18,17 @@ export function PeriodNav({
   return (
     <nav className="periods flex flex-wrap gap-2">
       {periods.map(([value, label]) => (
-        <a
+        <Link
           key={value}
           href={hrefFor(value)}
+          scroll={false}
           aria-current={current === value ? "page" : undefined}
           className={current === value
             ? "inline-flex h-8 items-center rounded-lg bg-primary px-3 text-sm text-primary-foreground"
             : "inline-flex h-8 items-center rounded-lg bg-background px-3 text-sm ring-1 ring-foreground/10"}
         >
           {label}
-        </a>
+        </Link>
       ))}
     </nav>
   );

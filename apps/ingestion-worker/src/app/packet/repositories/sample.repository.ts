@@ -1,15 +1,19 @@
-import { getPool } from "../../../infra/database/pg-pool";
+import { Injectable } from "@nestjs/common";
+import { PgPool } from "../../../infra/database/pg-pool";
 import type { SamplePoint } from "../services/enrich-packet/enrich-packet.service";
 
+@Injectable()
 export class SampleRepository {
-  async upsert(sample: SamplePoint & {
+  public constructor(private readonly database: PgPool) {}
+
+  public async upsert(sample: SamplePoint & {
     environmentId: string;
     storeId: string;
     comfortStatus: "IN_RANGE" | "ABOVE" | "BELOW";
     isOperatingHours: boolean;
     rawBatchKey: string;
   }): Promise<void> {
-    await getPool().query(
+    await this.database.get().query(
       `INSERT INTO telemetry_samples (
          sample_time, environment_id, store_id, dev_id, temperature,
          is_operating_hours, comfort_status, is_delayed_packet, raw_batch_key

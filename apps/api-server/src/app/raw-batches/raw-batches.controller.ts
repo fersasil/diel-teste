@@ -12,9 +12,11 @@ export class RawBatchesController {
   async list(@Req() request: { access: AccessScope }, @Query("date") date?: string) {
     const day = date ?? new Date().toISOString().slice(0, 10);
     const result = await this.batches.execute(request.access, day);
+
     if ("code" in result && result.code === "FORBIDDEN") {
       throw new ForbiddenException({ code: "FORBIDDEN" });
     }
+
     return result;
   }
 }

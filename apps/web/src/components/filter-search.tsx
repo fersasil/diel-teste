@@ -76,7 +76,11 @@ export function FilterSearch({
           <button
             type="button"
             className="flex w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
-            onClick={() => onSelect("")}
+            onClick={() => {
+              setOpen(false);
+              setTyped("");
+              onSelect("");
+            }}
           >
             {allLabel}
           </button>
@@ -85,7 +89,11 @@ export function FilterSearch({
               key={item.value}
               type="button"
               className="flex w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
-              onClick={() => onSelect(item.value)}
+              onClick={() => {
+                setOpen(false);
+                setTyped("");
+                onSelect(item.value);
+              }}
             >
               {item.label}
             </button>

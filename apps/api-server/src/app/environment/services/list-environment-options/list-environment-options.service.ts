@@ -10,9 +10,11 @@ export { searchFragment } from "../../../../shared/search/search-fragment";
 
 export function parseOptionsLimit(value?: string): number {
   const size = Number(value ?? "20");
+
   if (!Number.isInteger(size) || size <= 0) {
     return 20;
   }
+
   return Math.min(size, 50);
 }
 
@@ -26,9 +28,11 @@ export class ListEnvironmentOptionsService {
     query: { storeId?: string; q?: string; storeQ?: string; limit?: string; selectedName?: string } = {},
   ): Promise<EnvironmentOptions> {
     const clientId = scopeClientId(scope);
+
     if (!clientId) {
       return { stores: [], environmentNames: [], code: "CLIENT_FOCUS_REQUIRED" };
     }
+
     const allowedStoreIds = scope.profile === "store_manager" ? scope.allowedStoreIds : null;
     const limit = parseOptionsLimit(query.limit);
     const [stores, environmentNames] = await Promise.all([

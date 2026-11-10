@@ -20,10 +20,12 @@ export async function publishLines(
   for (const line of lines) {
     await publish(TELEMETRY_TOPIC, line, PUBLISH_QOS);
     sent += 1;
+
     if (sent % 1000 === 0) {
       process.stdout.write(`published ${sent}/${lines.length}\n`);
     }
   }
+
   return sent;
 }
 
@@ -31,20 +33,28 @@ async function main(): Promise<void> {
   const file = process.env.TELEMETRY_FILE ?? "telemetrias.jsonl";
   const lines = loadLines(file).map(normalizeLine);
   const url = process.env.MQTT_URL;
+
   if (!url) {
     process.stdout.write(`${lines.length}\n`);
+
     return;
   }
+
   process.stdout.write(`publishing ${lines.length} packets from ${file}\n`);
+
   const client = mqtt.connect(url, { reconnectPeriod: 1000 });
+
   await new Promise<void>((resolve, reject) => {
     client.once("connect", () => resolve());
     client.once("error", reject);
   });
+
   await publishLines(lines, (topic, payload, qos) => new Promise((resolve, reject) => {
     client.publish(topic, payload, { qos }, (error) => error ? reject(error) : resolve());
   }));
+
   await new Promise<void>((resolve) => client.end(false, {}, () => resolve()));
+
   process.stdout.write(`published ${lines.length}\n`);
 }
 

@@ -117,7 +117,7 @@ export function polyline(
   return points.map((point) => `${xAt(point.index, count, frame)},${yAt(point.value, span, frame)}`).join(" ");
 }
 
-export function labelIndexes(count: number, maxLabels = 4): number[] {
+export function labelIndexes(count: number, maxLabels = 8): number[] {
   if (count <= 0) {
     return [];
   }

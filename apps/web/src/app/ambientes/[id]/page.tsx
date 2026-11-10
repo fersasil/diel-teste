@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { serverApiBase } from "../../../shared/api-base";
 import { EnvironmentBoard } from "../../../components/environment-board";
 import { detailHref } from "../../../network/detail-href";
-import { localDay } from "../../../shared/format";
+import { localDay, type WeekHours } from "../../../shared/format";
 import { kindFromStatus, type LoadKind } from "../../../shared/load-state";
 import { messages } from "../../../shared/messages/pt-BR";
 import { parseNetworkPeriod } from "../../../network/network-query";
@@ -13,6 +13,9 @@ interface Point {
   avgTemp: number | null;
   minTemp: number | null;
   maxTemp: number | null;
+  operatingAvgTemp: number | null;
+  operatingMinTemp: number | null;
+  operatingMaxTemp: number | null;
   isOperatingHours: boolean | null;
 }
 
@@ -30,6 +33,7 @@ interface SummaryBody {
   timezone: string;
   comfortMin: number;
   comfortMax: number;
+  operatingHours?: WeekHours;
   deviceStatus?: "ONLINE" | "OFFLINE" | "NO_DATA";
   comfortPercent?: number | null;
   lastTemp?: number | null;
@@ -44,7 +48,7 @@ export default async function EnvironmentPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ bucket?: string; period?: string; date?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ bucket?: string; period?: string; date?: string; from?: string; to?: string; hours?: string }>;
 }) {
   const token = (await cookies()).get("accessToken")?.value ?? "";
   if (!token) {
@@ -53,12 +57,14 @@ export default async function EnvironmentPage({
   const { id } = await params;
   const query = await searchParams;
   const requested = query.bucket ?? "";
-  const bucket = ["30m", "1h", "1d", "1w", "1mo"].includes(requested) ? requested : "30m";
+  const knownBuckets = ["30m", "1h", "1d", "1w", "1mo"];
+  const bucket = requested === "" || knownBuckets.includes(requested) ? requested || "30m" : requested;
   const period = parseNetworkPeriod(query.period);
   const date = dayParam(query.date);
   const from = dayParam(query.from);
   const to = dayParam(query.to);
   const ranged = Boolean(from && to);
+  const onlyOperating = query.hours === "expediente";
   const summary = await loadJson<SummaryBody>(token, `/api/v1/environments/${id}/summary?${seriesQuery({ period, date, from, to })}`);
   if (summary === "session") {
     redirect("/entrar?aviso=sessao");
@@ -90,6 +96,7 @@ export default async function EnvironmentPage({
         <p className="text-sm text-muted-foreground">{summary.storeName}</p>
       </div>
       <EnvironmentBoard
+        key={`${bucket}|${period}|${from}|${to}|${ranged}`}
         id={id}
         token={token}
         period={period}
@@ -101,17 +108,22 @@ export default async function EnvironmentPage({
         timezone={summary.timezone}
         comfortMin={summary.comfortMin}
         comfortMax={summary.comfortMax}
+        operatingHours={summary.operatingHours ?? {}}
         comfortPercent={summary.comfortPercent ?? null}
         lastTemp={summary.lastTemp ?? null}
         latestAt={summary.latestAt ?? null}
         deviceStatus={summary.deviceStatus ?? "NO_DATA"}
         external={isBody(series) ? series.external ?? [] : []}
         failed={!isBody(series)}
+        onlyOperating={onlyOperating}
         points={isBody(series) ? series.points.map((point) => ({
           at: point.bucketStart,
           avgTemp: point.avgTemp,
           minTemp: point.minTemp,
           maxTemp: point.maxTemp,
+          operatingAvgTemp: point.operatingAvgTemp ?? null,
+          operatingMinTemp: point.operatingMinTemp ?? null,
+          operatingMaxTemp: point.operatingMaxTemp ?? null,
           isOperatingHours: point.isOperatingHours,
         })) : []}
       />

@@ -34,20 +34,24 @@ export class EnvironmentListRepository {
     const pool = getPool();
     const filters = ["s.client_id = $1"];
     const values: unknown[] = [input.clientId];
+
     if (input.storeId) {
       values.push(input.storeId);
       filters.push(`e.store_id = $${values.length}`);
     }
+
     if (input.environmentName) {
       values.push(input.environmentName);
       filters.push(`e.name = $${values.length}`);
     }
+
     if (input.comfortStatus === "NO_DATA") {
       filters.push("e.last_seen_at IS NULL");
     } else if (input.comfortStatus) {
       values.push(input.comfortStatus);
       filters.push(`e.last_seen_at IS NOT NULL AND e.last_comfort_status = $${values.length}`);
     }
+
     if (input.deviceStatus === "NO_DATA") {
       filters.push("e.last_seen_at IS NULL");
     } else if (input.deviceStatus) {
@@ -57,10 +61,12 @@ export class EnvironmentListRepository {
         ? `e.last_seen_at IS NOT NULL AND ${online}`
         : `e.last_seen_at IS NOT NULL AND NOT (${online})`);
     }
+
     if (input.allowedStoreIds) {
       values.push(input.allowedStoreIds);
       filters.push(`s.id = ANY($${values.length}::text[])`);
     }
+
     const where = filters.join(" AND ");
     const count = await pool.query<{ total: string }>(
       `SELECT COUNT(*)::text AS total
@@ -134,18 +140,22 @@ export class EnvironmentListRepository {
   }): Promise<string[]> {
     const filters = ["s.client_id = $1"];
     const values: unknown[] = [input.clientId];
+
     if (input.storeId) {
       values.push(input.storeId);
       filters.push(`e.store_id = $${values.length}`);
     }
+
     if (input.allowedStoreIds) {
       values.push(input.allowedStoreIds);
       filters.push(`s.id = ANY($${values.length}::text[])`);
     }
+
     if (input.query) {
       values.push(input.query);
       filters.push(`e.name ILIKE '%' || $${values.length} || '%' ESCAPE '\\'`);
     }
+
     values.push(input.limit);
     const rows = await getPool().query<{ name: string }>(
       `SELECT DISTINCT e.name
@@ -157,9 +167,11 @@ export class EnvironmentListRepository {
       values,
     );
     const names = rows.rows.map((row) => row.name);
+
     if (input.selectedName && !names.includes(input.selectedName)) {
       names.unshift(input.selectedName);
     }
+
     return names;
   }
 }
@@ -173,9 +185,11 @@ function orderSql(
   if (sort === "store") {
     return `s.name ${dir}, e.name ASC`;
   }
+
   if (sort === "environment") {
     return `e.name ${dir}, s.name ASC`;
   }
+
   if (sort === "comfort") {
     return `CASE
               WHEN e.last_seen_at IS NULL THEN 3
@@ -185,6 +199,7 @@ function orderSql(
               ELSE 3
             END ${dir}, s.name ASC, e.name ASC`;
   }
+
   if (sort === "device") {
     values.push(virtualNow ?? new Date());
     return `CASE
@@ -193,6 +208,7 @@ function orderSql(
               ELSE 1
             END ${dir}, s.name ASC, e.name ASC`;
   }
+
   return `CASE
             WHEN e.last_seen_at IS NOT NULL AND e.last_comfort_status IN ('ABOVE', 'BELOW') THEN 0
             ELSE 1

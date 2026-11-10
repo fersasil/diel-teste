@@ -13,14 +13,18 @@ export function hashPassword(password: string, salt = "diel-fixture-v1"): string
 
 export function passwordMatches(password: string, passwordHash: string): boolean {
   const [scheme, saltHex, hashHex] = passwordHash.split(":");
+
   if (scheme !== "scrypt" || !saltHex || !hashHex) {
     return false;
   }
+
   const expected = Buffer.from(hashHex, "hex");
   const actual = scryptSync(password, Buffer.from(saltHex, "hex"), expected.length);
+
   if (actual.length !== expected.length) {
     return false;
   }
+
   return timingSafeEqual(actual, expected);
 }
 
@@ -30,13 +34,17 @@ export class LoginService {
 
   async execute(email: string, password: string): Promise<LoginResult> {
     const user = await this.users.findByEmail(email);
+
     if (!user || !passwordMatches(password, user.passwordHash)) {
       return { code: "INVALID_CREDENTIALS" };
     }
+
     const secret = process.env.JWT_SECRET;
+
     if (!secret) {
       return { code: "INVALID_CREDENTIALS" };
     }
+
     const visible = publicUser(user);
     const accessToken = jwt.sign(
       {

@@ -15,6 +15,7 @@ export function assembleSession(
   if (!clientId) {
     return { profile, clientId: null, clientName: null };
   }
+
   return { profile, clientId, clientName };
 }
 
@@ -25,9 +26,11 @@ export class ReadSessionService {
   async execute(scope: AccessScope): Promise<SessionView> {
     const clientId = scopeClientId(scope);
     const asOf = await readStoredVirtualNow();
+
     if (!clientId) {
       return { ...assembleSession(scope.profile, null, null), asOf };
     }
+
     const client = await this.clients.findById(clientId);
     return { ...assembleSession(scope.profile, clientId, client?.name ?? null), asOf };
   }

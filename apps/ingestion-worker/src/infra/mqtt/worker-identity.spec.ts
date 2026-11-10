@@ -10,6 +10,7 @@ describe("shared mqtt subscription", () => {
     } else {
       process.env.MQTT_CLIENT_ID = clientId;
     }
+
     if (shareGroup === undefined) {
       delete process.env.MQTT_SHARE_GROUP;
     } else {

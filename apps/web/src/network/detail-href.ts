@@ -2,9 +2,12 @@ export function detailHref(
   id: string,
   period: string,
   bucket: string,
-  extra?: { date?: string; from?: string; to?: string },
+  extra?: { date?: string; from?: string; to?: string; operating?: boolean },
 ): string {
   const params = new URLSearchParams({ bucket });
+  if (extra?.operating) {
+    params.set("hours", "expediente");
+  }
   if (extra?.from && extra.to) {
     params.set("from", extra.from);
     params.set("to", extra.to);

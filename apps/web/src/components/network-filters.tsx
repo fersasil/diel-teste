@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 import { browserApiBase } from "../shared/api-base";
 import { FilterSearch } from "./filter-search";
@@ -20,6 +21,7 @@ export function NetworkFilters({
   clientId: string;
   query: NetworkQuery;
 }) {
+  const router = useRouter();
   const storeId = query.storeId ?? "";
   const storeLabel = stores.find((store) => store.id === storeId)?.name ?? messages.allStores;
   const environmentLabel = query.environmentName || messages.allEnvironments;
@@ -36,7 +38,7 @@ export function NetworkFilters({
   }[query.deviceStatus ?? ""] ?? messages.allDevices;
 
   function apply(next: Partial<NetworkQuery>) {
-    window.location.href = networkHref({ ...query, page: 1, ...next });
+    router.push(networkHref({ ...query, page: 1, ...next }), { scroll: false });
   }
 
   const searchStores = useCallback(async (typed: string) => {

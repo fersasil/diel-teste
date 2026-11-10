@@ -55,9 +55,11 @@ export class ListStoresService {
     const { sort, dir } = parseStoreSort(query);
     const range = periodRange(parsePeriod(query.period), virtualNow);
     const clientId = scopeClientId(scope);
+
     if (!clientId) {
       return { page, pageSize, total: 0, items: [], code: "CLIENT_FOCUS_REQUIRED" };
     }
+
     const listed = await this.stores.list({
       clientId,
       allowedStoreIds: scope.profile === "store_manager" ? scope.allowedStoreIds : null,

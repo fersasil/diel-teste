@@ -15,32 +15,39 @@ function focusKey(userId: string): string {
 
 async function redis(): Promise<RedisClientType | null> {
   const url = process.env.REDIS_URL;
+
   if (!url) {
     return null;
   }
+
   if (!client) {
     client = createClient({ url });
     client.on("error", () => undefined);
     connecting = client.connect();
   }
+
   await connecting;
   return client;
 }
 
 export async function setFocus(userId: string, clientId: string): Promise<void> {
   const store = await redis();
+
   if (!store) {
     memory.set(userId, clientId);
     return;
   }
+
   await store.set(focusKey(userId), clientId);
 }
 
 export async function getFocus(userId: string): Promise<string | null> {
   const store = await redis();
+
   if (!store) {
     return memory.get(userId) ?? null;
   }
+
   return (await store.get(focusKey(userId))) ?? null;
 }
 
@@ -50,9 +57,11 @@ export class FocusClientService {
 
   async execute(userId: string, clientId: string): Promise<FocusResult> {
     const client = await this.clients.findById(clientId);
+
     if (!client) {
       return { code: "NOT_FOUND" };
     }
+
     await setFocus(userId, client.id);
     return { clientId: client.id };
   }

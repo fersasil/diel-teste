@@ -27,7 +27,7 @@ describe("chart geometry", () => {
   });
 
   it("picks unique label indexes including the ends", () => {
-    expect(labelIndexes(48)).toEqual([0, 16, 31, 47]);
+    expect(labelIndexes(48)).toEqual([0, 7, 13, 20, 27, 34, 40, 47]);
     expect(labelIndexes(1)).toEqual([0]);
   });
 });

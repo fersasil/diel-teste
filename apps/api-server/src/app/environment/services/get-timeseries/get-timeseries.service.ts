@@ -9,14 +9,18 @@ export class GetTimeseriesService {
 
   async execute(input: TimeseriesQuery): Promise<TimeseriesResult> {
     const bucket = resolveBucket(input.bucket);
+
     if (bucket === "INVALID_BUCKET") {
       return { code: "INVALID_BUCKET" };
     }
+
     const from = new Date(input.from);
     const to = new Date(input.to);
+
     if (validateRange(from, to) === "INVALID_RANGE") {
       return { code: "INVALID_RANGE" };
     }
+
     const points = await this.series.series({
       environmentId: input.environmentId,
       from,

@@ -6,12 +6,15 @@ export type { StreamJob } from "./drain-stream.interface";
 export function concurrencyForBacklog(backlog: number): number {
   const base = positive(process.env.INGEST_CONCURRENCY, 8);
   const peak = Math.max(base, positive(process.env.INGEST_CONCURRENCY_PEAK, 32));
+
   if (backlog >= 5000) {
     return peak;
   }
+
   if (backlog >= 500) {
     return Math.min(peak, base * 2);
   }
+
   return base;
 }
 
@@ -47,13 +50,16 @@ export async function drainMessages(
       active += 1;
       return;
     }
+
     await new Promise<void>((resolve) => waiters.push(resolve));
     active += 1;
   }
+
   function unlock(): void {
     active -= 1;
     waiters.shift()?.();
   }
+
   await Promise.all(items.map(async (item) => {
     await lock();
     try {
@@ -72,11 +78,14 @@ async function settle(
   bumpFails: (id: string) => Promise<number>,
 ): Promise<void> {
   const ok = await persist(item.payload);
+
   if (ok) {
     await ack(item.id);
     return;
   }
+
   const fails = await bumpFails(item.id);
+
   if (shouldDeadLetter(fails)) {
     await dead(item.id, item.payload);
   }

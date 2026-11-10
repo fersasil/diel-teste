@@ -8,6 +8,7 @@ const environment: EnvironmentRow = {
   storeId: "LOJA-RJ-001",
   comfortMin: 21,
   comfortMax: 25,
+  operatingHours: { mon: [["09:00", "20:00"]] },
   lastTemp: 22,
   lastComfortStatus: "IN_RANGE",
   lastSeenAt: new Date("2026-04-02T15:00:00.000Z"),
@@ -21,6 +22,7 @@ describe("environment summary", () => {
     const summary = summarize(environment, new Date("2026-04-02T15:00:00.000Z"), 1, 1);
     expect(summary.storeName).toBe("Loja Tijuca");
     expect(summary.timezone).toBe("America/Sao_Paulo");
+    expect(summary.operatingHours.mon).toEqual([["09:00", "20:00"]]);
   });
 
   it("returns NOT_FOUND when the row is missing, including another client", () => {

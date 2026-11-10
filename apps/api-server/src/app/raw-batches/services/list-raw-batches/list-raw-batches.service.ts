@@ -10,13 +10,17 @@ export class ListRawBatchesService {
 
   async execute(scope: AccessScope, date: string): Promise<RawBatchList> {
     const decision = decideRawBatchAccess(scope);
+
     if (decision !== "OK") {
       return { code: decision, items: [] };
     }
+
     const clientId = scopeClientId(scope);
+
     if (!clientId) {
       return { code: "CLIENT_FOCUS_REQUIRED", items: [] };
     }
+
     return { items: await this.batches.listByDay(clientId, date) };
   }
 }

@@ -31,10 +31,12 @@ export class StoreDashboardRepository {
   }): Promise<DashboardTotals> {
     const filters = ["s.client_id = $1"];
     const values: unknown[] = [input.clientId, input.virtualNow];
+
     if (input.allowedStoreIds) {
       values.push(input.allowedStoreIds);
       filters.push(`s.id = ANY($${values.length}::text[])`);
     }
+
     const row = await getPool().query(
       `SELECT COUNT(DISTINCT s.id)::int AS store_count,
               COUNT(e.id)::int AS environment_count,
@@ -86,10 +88,12 @@ export class StoreDashboardRepository {
   }): Promise<DashboardAlertStore[]> {
     const filters = ["s.client_id = $1"];
     const values: unknown[] = [input.clientId, input.virtualNow];
+
     if (input.allowedStoreIds) {
       values.push(input.allowedStoreIds);
       filters.push(`s.id = ANY($${values.length}::text[])`);
     }
+
     values.push(input.limit);
     const rows = await getPool().query(
       `SELECT s.id, s.name,

@@ -18,13 +18,16 @@ describe("store list order", () => {
     };
     const outOfRange = (item: { outOfRangeEnvCount: number }) => item.outOfRangeEnvCount > 0;
     const firstInRange = body.items.findIndex((item) => !outOfRange(item));
+
     if (body.items.some(outOfRange)) {
       expect(outOfRange(body.items[0])).toBe(true);
     }
+
     if (firstInRange > 0) {
       expect(body.items.slice(0, firstInRange).every(outOfRange)).toBe(true);
       expect(body.items.slice(firstInRange).some(outOfRange)).toBe(false);
     }
+
     const names = body.items.map((item) => item.name);
     const exceptionNames = body.items.filter(outOfRange).map((item) => item.name);
     expect([...exceptionNames].sort((a, b) => a.localeCompare(b))).toEqual(exceptionNames);

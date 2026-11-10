@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, Store } from "lucide-react";
+import { LayoutDashboard, Radio, Store } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useRef, type ReactNode, type WheelEvent } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,12 +12,14 @@ export function DashboardShell({
   profileLabel,
   clientName,
   showSwitch,
+  operator,
   asOf,
   children,
 }: {
   profileLabel: string;
   clientName: string | null;
   showSwitch: boolean;
+  operator: boolean;
   asOf: string | null;
   children: ReactNode;
 }) {
@@ -39,10 +41,8 @@ export function DashboardShell({
         className="hidden h-full w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex"
         onWheel={scrollFromSidebar}
       >
-        <div className="flex items-center gap-3 px-4 py-5">
-          <div className="rounded-lg bg-white px-2 py-1">
-            <img src="/brand/logo-diel-energia-header.svg" alt="Diel" className="h-8 w-auto" />
-          </div>
+        <div className="flex items-center px-4 py-5">
+          <img src="/brand/logo-diel-energia-header.svg" alt="Diel" className="h-8 w-auto" />
         </div>
         <nav className="flex flex-col gap-1 px-3">
           <NavLink href="/" active={pathname === "/"} icon={<LayoutDashboard className="size-4" />}>
@@ -51,6 +51,11 @@ export function DashboardShell({
           <NavLink href="/rede" active={pathname.startsWith("/rede")} icon={<Store className="size-4" />}>
             {messages.networkTitle}
           </NavLink>
+          {operator ? (
+            <NavLink href="/entrada" active={pathname.startsWith("/entrada")} icon={<Radio className="size-4" />}>
+              {messages.intakeTitle}
+            </NavLink>
+          ) : null}
         </nav>
         <p className="mt-auto px-4 py-4 text-xs text-sidebar-foreground/70">{messages.productName}</p>
       </aside>
@@ -93,7 +98,7 @@ function NavLink({
       href={href}
       className={cn(
         "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium",
-        active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60",
+        active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-[#E2E8F0]",
       )}
     >
       {icon}

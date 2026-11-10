@@ -23,10 +23,12 @@ describe("GET /api/v1/auth/session", () => {
 
     if (process.env.REDIS_URL) {
       const redis = createClient({ url: process.env.REDIS_URL });
+
       await redis.connect();
       await redis.del("operator:focus:USR-001");
       await redis.disconnect();
     }
+
     const ana = await login("ana.ribeiro@diel.example");
     const operator = await fetch(`${base}/api/v1/auth/session`, {
       headers: { authorization: `Bearer ${ana.accessToken}` },

@@ -15,9 +15,11 @@ export class ClientRepository {
       [id],
     );
     const row = result.rows[0];
+
     if (!row) {
       return null;
     }
+
     return { id: row.id, name: row.name };
   }
 
@@ -30,10 +32,12 @@ export class ClientRepository {
   }): Promise<{ items: ClientListRow[]; total: number }> {
     const filters: string[] = [];
     const values: unknown[] = [];
+
     if (input.query) {
       values.push(input.query);
       filters.push(`c.name ILIKE '%' || $${values.length} || '%' ESCAPE '\\'`);
     }
+
     const where = filters.length > 0 ? `WHERE ${filters.join(" AND ")}` : "";
     const count = await getPool().query<{ total: string }>(
       `SELECT COUNT(*)::text AS total FROM clients c ${where}`,

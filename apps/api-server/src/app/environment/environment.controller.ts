@@ -79,9 +79,11 @@ export class EnvironmentController {
     const environment = await this.scoped(request.access, id);
     const clock = await readVirtualNow();
     const range = windowOf(environment, clock, { period, date, from, to });
+
     if (range === "INVALID_RANGE") {
       throw new BadRequestException({ code: "INVALID_RANGE" });
     }
+
     const counts = await this.environments.operatingCounts(id, range.from, range.to);
     return {
       ...summarize(
@@ -113,9 +115,11 @@ export class EnvironmentController {
     const range = dated || !from || !to
       ? windowOf(environment, clock, { period, date, from, to })
       : { from: new Date(from), to: new Date(to) };
+
     if (range === "INVALID_RANGE") {
       throw new BadRequestException({ code: "INVALID_RANGE" });
     }
+
     const fromIso = range.from.toISOString();
     const toIso = range.to.toISOString();
     const series = await this.timeseries.execute({
@@ -125,9 +129,11 @@ export class EnvironmentController {
       bucket,
       timezone: environment.timezone,
     });
+
     if ("code" in series) {
       throw new BadRequestException({ code: series.code });
     }
+
     const hourly = await this.weather.series(environment.storeId, new Date(fromIso), new Date(toIso));
     const external = alignExternalWeather(series.points, hourly, series.bucket);
     return attachExternalWeather(
@@ -143,16 +149,21 @@ export class EnvironmentController {
 
   private async scoped(scope: AccessScope, id: string) {
     const clientId = scopeClientId(scope);
+
     if (!clientId) {
       throw new NotFoundException({ code: "NOT_FOUND" });
     }
+
     const environment = await this.environments.findScoped(id, clientId);
+
     if (!environment) {
       throw new NotFoundException({ code: "NOT_FOUND" });
     }
+
     if (scope.profile === "store_manager" && !scope.allowedStoreIds.includes(environment.storeId)) {
       throw new NotFoundException({ code: "NOT_FOUND" });
     }
+
     return environment;
   }
 }
@@ -164,13 +175,17 @@ function windowOf(
 ): { from: Date; to: Date } | "INVALID_RANGE" {
   const fromDay = parseDay(query.from);
   const toDay = parseDay(query.to);
+
   if (fromDay && toDay) {
     const span = daySpan(fromDay, toDay, environment.timezone);
+
     if (!span || validateRange(span.from, span.to) !== "OK") {
       return "INVALID_RANGE";
     }
+
     return span;
   }
+
   return periodRange(parsePeriod(query.period), anchor(environment, virtualNow, query.date));
 }
 

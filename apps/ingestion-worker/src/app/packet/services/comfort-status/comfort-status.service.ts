@@ -6,8 +6,10 @@ export function comfortStatus(temperature: number, minimum: number, maximum: num
   if (temperature < minimum) {
     return "BELOW";
   }
+
   if (temperature > maximum) {
     return "ABOVE";
   }
+
   return "IN_RANGE";
 }

@@ -36,18 +36,23 @@ async function bootstrap(): Promise<void> {
     if (reply.statusCode >= 500) {
       httpErrors.inc();
     }
+
     done();
   });
+
   fastify.get("/metrics", async (_request, reply) => {
     reply.header("Content-Type", registry.contentType);
     return registry.metrics();
   });
+
   const port = Number(process.env.API_PORT ?? 3000);
+
   await app.listen(port, "0.0.0.0");
   log.info({ port }, "api listening");
 }
 
 void bootstrap().catch((error: unknown) => {
   console.error(error);
+
   process.exit(1);
 });

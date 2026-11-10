@@ -18,9 +18,11 @@ export class ClientsController {
     @Query("dir") dir?: string,
   ) {
     const listed = await this.listClients.execute(request.access, { page, pageSize, q, sort, dir });
+
     if (listed.code === "FORBIDDEN") {
       throw new ForbiddenException({ code: "FORBIDDEN" });
     }
+
     return listed;
   }
 }

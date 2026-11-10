@@ -5,5 +5,6 @@ export function signToken(scope: AccessScope, secret = process.env.JWT_SECRET): 
   if (!secret) {
     throw new Error("JWT_SECRET is required");
   }
+
   return jwt.sign(scope, secret, { expiresIn: "1h" });
 }

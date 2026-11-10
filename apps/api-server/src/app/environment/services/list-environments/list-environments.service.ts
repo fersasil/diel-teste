@@ -75,9 +75,11 @@ export class ListEnvironmentsService {
     const { sort, dir } = parseEnvironmentSort(query);
     const range = periodRange(parsePeriod(query.period), virtualNow);
     const clientId = scopeClientId(scope);
+
     if (!clientId) {
       return { page, pageSize, total: 0, items: [], code: "CLIENT_FOCUS_REQUIRED" };
     }
+
     const listed = await this.environments.list({
       clientId,
       storeId: query.storeId || undefined,

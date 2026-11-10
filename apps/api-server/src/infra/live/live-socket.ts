@@ -17,34 +17,43 @@ export function attachLiveSockets(server: Server): void {
   const wss = new WebSocketServer({ noServer: true });
   server.on("upgrade", (request, socket, head) => {
     const url = new URL(request.url ?? "", "http://localhost");
+
     if (url.pathname !== "/live") {
       socket.destroy();
       return;
     }
+
     const access = verify(url.searchParams.get("token"));
+
     if (!access) {
       socket.destroy();
       return;
     }
+
     wss.handleUpgrade(request, socket, head, (ws) => {
       const live = { socket: ws, ...access };
       clients.add(live);
       ws.on("close", () => clients.delete(live));
     });
   });
+
   void fanout(clients).catch(() => undefined);
 }
 
 function verify(token: string | null): Omit<LiveClient, "socket"> | null {
   const secret = process.env.JWT_SECRET;
+
   if (!token || !secret) {
     return null;
   }
+
   try {
     const payload = jwt.verify(token, secret);
+
     if (!payload || typeof payload === "string") {
       return null;
     }
+
     return {
       profile: String(payload.profile),
       clientId: typeof payload.clientId === "string" ? payload.clientId : null,
@@ -58,9 +67,11 @@ function verify(token: string | null): Omit<LiveClient, "socket"> | null {
 
 async function fanout(clients: Set<LiveClient>): Promise<void> {
   const url = process.env.REDIS_URL;
+
   if (!url) {
     return;
   }
+
   const subscriber = createClient({ url });
   subscriber.on("error", () => undefined);
   await subscriber.connect();
@@ -79,11 +90,14 @@ async function focusedClient(live: LiveClient): Promise<string | null> {
   if (live.profile !== "diel_operator") {
     return live.clientId;
   }
+
   const userId = live.userId ?? "";
   const hit = focusCache.get(userId);
+
   if (hit && hit.until > Date.now()) {
     return hit.id;
   }
+
   const id = await getFocus(userId);
   focusCache.set(userId, { id, until: Date.now() + 5000 });
   return id;
@@ -91,11 +105,14 @@ async function focusedClient(live: LiveClient): Promise<string | null> {
 
 async function deliver(live: LiveClient, clientId: string, event: { storeId?: string }, message: string): Promise<void> {
   const focused = await focusedClient(live);
+
   if (focused !== clientId) {
     return;
   }
+
   if (live.profile === "store_manager" && !live.allowedStoreIds.includes(event.storeId ?? "")) {
     return;
   }
+
   live.socket.send(message);
 }

@@ -1,4 +1,5 @@
-import { getRedis, getRedisReader } from "../../../infra/redis/redis";
+import { Injectable } from "@nestjs/common";
+import { RedisStore } from "../../../infra/redis/redis";
 
 export interface StreamMessage {
   id: string;
@@ -8,105 +9,112 @@ export interface StreamMessage {
 const TRIM = 500_000;
 const FAIL_PREFIX = "telemetry:fails:";
 
-export function streamKey(): string {
-  return process.env.REDIS_STREAM_KEY ?? "telemetry:stream";
-}
+@Injectable()
+export class TelemetryStreamRepository {
+  public constructor(private readonly redis: RedisStore) {}
 
-export function streamGroup(): string {
-  return process.env.REDIS_CONSUMER_GROUP ?? "telemetry_cg";
-}
+  // Buffer between the broker and the consumer group. The approximate MAXLEN
+  // drops the oldest entries once the stream outgrows the cap. True releases
+  // the MQTT PUBACK. False makes the broker deliver the packet again.
+  public async enqueue(payload: string, receivedAt = new Date()): Promise<boolean> {
+    try {
+      const redis = await this.redis.get();
 
-export function deadLetterKey(): string {
-  return `${streamKey()}:dlq`;
-}
-
-export async function enqueueRaw(payload: string, receivedAt = new Date()): Promise<boolean> {
-  try {
-    const redis = await getRedis();
-    await redis.xAdd(streamKey(), "*", {
-      payload,
-      receivedAt: receivedAt.toISOString(),
-    }, {
-      TRIM: { strategy: "MAXLEN", strategyModifier: "~", threshold: TRIM },
-    });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export async function streamBacklog(): Promise<number> {
-  const redis = await getRedis();
-  return redis.xLen(streamKey());
-}
-
-export async function ensureGroup(): Promise<void> {
-  const redis = await getRedis();
-  try {
-    await redis.xGroupCreate(streamKey(), streamGroup(), "0", { MKSTREAM: true });
-  } catch (error) {
-    const text = error instanceof Error ? error.message : "";
-    if (!text.includes("BUSYGROUP")) {
-      throw error;
+      await redis.xAdd(this.streamKey(), "*", {
+        payload,
+        receivedAt: receivedAt.toISOString(),
+      }, {
+        TRIM: { strategy: "MAXLEN", strategyModifier: "~", threshold: TRIM },
+      });
+      return true;
+    } catch {
+      return false;
     }
   }
-}
 
-export async function readBatch(
-  consumer: string,
-  count: number,
-  blockMs: number,
-): Promise<StreamMessage[]> {
-  const redis = await getRedisReader();
-  const reply = await redis.xReadGroup(streamGroup(), consumer, {
-    key: streamKey(),
-    id: ">",
-  }, { COUNT: count, BLOCK: blockMs });
-  return flatten(reply);
-}
-
-export async function claimStale(
-  consumer: string,
-  minIdleMs: number,
-  count: number,
-): Promise<StreamMessage[]> {
-  const redis = await getRedisReader();
-  try {
-    const claimed = await redis.xAutoClaim(
-      streamKey(),
-      streamGroup(),
-      consumer,
-      minIdleMs,
-      "0-0",
-      { COUNT: count },
-    );
-    return (claimed.messages ?? []).flatMap((item) => toMessage(item)).filter((item): item is StreamMessage => Boolean(item));
-  } catch {
-    return [];
+  public async backlog(): Promise<number> {
+    const redis = await this.redis.get();
+    return redis.xLen(this.streamKey());
   }
-}
 
-export async function ackAndDelete(ids: string[]): Promise<void> {
-  if (ids.length === 0) {
-    return;
+  public async ensureGroup(): Promise<void> {
+    const redis = await this.redis.get();
+    try {
+      await redis.xGroupCreate(this.streamKey(), this.group(), "0", { MKSTREAM: true });
+    } catch (error) {
+      const text = error instanceof Error ? error.message : "";
+
+      if (!text.includes("BUSYGROUP")) {
+        throw error;
+      }
+    }
   }
-  const redis = await getRedis();
-  for (const id of ids) {
-    await redis.xAck(streamKey(), streamGroup(), id);
-    await redis.xDel(streamKey(), id);
+
+  public async readNew(consumer: string, count: number, blockMs: number): Promise<StreamMessage[]> {
+    const redis = await this.redis.openReader();
+    const reply = await redis.xReadGroup(this.group(), consumer, {
+      key: this.streamKey(),
+      id: ">",
+    }, { COUNT: count, BLOCK: blockMs });
+    return flatten(reply);
   }
-  await redis.del(ids.map((id) => `${FAIL_PREFIX}${id}`));
-}
 
-export async function bumpFails(id: string): Promise<number> {
-  const redis = await getRedis();
-  return redis.incr(`${FAIL_PREFIX}${id}`);
-}
+  public async claimStale(consumer: string, minIdleMs: number, count: number): Promise<StreamMessage[]> {
+    const redis = await this.redis.openReader();
+    try {
+      const claimed = await redis.xAutoClaim(
+        this.streamKey(),
+        this.group(),
+        consumer,
+        minIdleMs,
+        "0-0",
+        { COUNT: count },
+      );
+      return (claimed.messages ?? [])
+        .flatMap((item) => toMessage(item))
+        .filter((item): item is StreamMessage => Boolean(item));
+    } catch {
+      return [];
+    }
+  }
 
-export async function moveToDeadLetter(id: string, payload: string): Promise<void> {
-  const redis = await getRedis();
-  await redis.xAdd(deadLetterKey(), "*", { payload, sourceId: id });
-  await ackAndDelete([id]);
+  public async acknowledge(ids: string[]): Promise<void> {
+    if (ids.length === 0) {
+      return;
+    }
+
+    const redis = await this.redis.get();
+    for (const id of ids) {
+      await redis.xAck(this.streamKey(), this.group(), id);
+      await redis.xDel(this.streamKey(), id);
+    }
+
+    await redis.del(ids.map((id) => `${FAIL_PREFIX}${id}`));
+  }
+
+  public async recordFailure(id: string): Promise<number> {
+    const redis = await this.redis.get();
+    return redis.incr(`${FAIL_PREFIX}${id}`);
+  }
+
+  public async moveToDeadLetter(id: string, payload: string): Promise<void> {
+    const redis = await this.redis.get();
+
+    await redis.xAdd(this.deadLetterKey(), "*", { payload, sourceId: id });
+    await this.acknowledge([id]);
+  }
+
+  private streamKey(): string {
+    return process.env.REDIS_STREAM_KEY ?? "telemetry:stream";
+  }
+
+  private group(): string {
+    return process.env.REDIS_CONSUMER_GROUP ?? "telemetry_cg";
+  }
+
+  private deadLetterKey(): string {
+    return `${this.streamKey()}:dlq`;
+  }
 }
 
 function flatten(
@@ -115,6 +123,7 @@ function flatten(
   if (!reply) {
     return [];
   }
+
   return reply.flatMap((entry) => entry.messages.flatMap((item) => toMessage(item) ?? []));
 }
 
@@ -122,9 +131,12 @@ function toMessage(item: { id: string; message?: Record<string, string> } | null
   if (!item?.id) {
     return null;
   }
+
   const payload = item.message?.payload;
+
   if (!payload) {
     return null;
   }
+
   return { id: item.id, payload };
 }

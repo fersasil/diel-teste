@@ -1,5 +1,6 @@
 import { formatChartTick } from "../shared/format";
 import { messages } from "../shared/messages/pt-BR";
+import { plottedTemperatures } from "./chart-hours";
 import { axisTicks, bounds, labelIndexes, polyline, ribbon, segments, xAt, yAt, type PlotFrame } from "./chart-geometry";
 
 interface Point {
@@ -7,6 +8,9 @@ interface Point {
   avgTemp: number | null;
   minTemp: number | null;
   maxTemp: number | null;
+  operatingAvgTemp: number | null;
+  operatingMinTemp: number | null;
+  operatingMaxTemp: number | null;
   isOperatingHours: boolean | null;
 }
 
@@ -23,6 +27,7 @@ export function TemperatureChart({
   comfortMax,
   timezone,
   showTime = true,
+  onlyOperating = false,
 }: {
   points: Point[];
   external: ExternalPoint[];
@@ -30,8 +35,10 @@ export function TemperatureChart({
   comfortMax: number;
   timezone: string;
   showTime?: boolean;
+  onlyOperating?: boolean;
 }) {
-  const numbers = points.flatMap((point) => [point.avgTemp, point.minTemp, point.maxTemp]);
+  const shown = points.map((point) => plottedTemperatures(point, onlyOperating));
+  const numbers = shown.flatMap((point) => [point.avgTemp, point.minTemp, point.maxTemp]);
   const outside = external.map((point) => point.avgTemp);
   const finite = [...numbers, ...outside].filter((value): value is number => value !== null);
   const span = bounds(finite, comfortMin, comfortMax);
@@ -40,10 +47,10 @@ export function TemperatureChart({
   const bandBottom = yAt(comfortMin, span, frame);
   const plotRight = frame.width - frame.right;
   const plotBottom = frame.height - frame.bottom;
-  const avg = segments(points.map((point) => point.avgTemp));
+  const avg = segments(shown.map((point) => point.avgTemp));
   const spread = ribbon(
-    points.map((point) => point.minTemp),
-    points.map((point) => point.maxTemp),
+    shown.map((point) => point.minTemp),
+    shown.map((point) => point.maxTemp),
     count,
     span,
     frame,
@@ -52,6 +59,7 @@ export function TemperatureChart({
   const hasGap = points.length === 0 || points.some((point) => point.avgTemp === null);
   const operating = points.some((point) => point.isOperatingHours);
   const empty = finite.length === 0;
+  const closedOnly = onlyOperating && empty && points.some((point) => point.avgTemp !== null);
   const ticks = axisTicks(span);
 
   return (
@@ -111,14 +119,14 @@ export function TemperatureChart({
         })}
         {empty ? (
           <text x={frame.width / 2} y={frame.height / 2} textAnchor="middle" fontSize={14} fill="#64748b">
-            {messages.chartEmpty}
+            {closedOnly ? messages.chartEmptyHours : messages.chartEmpty}
           </text>
         ) : null}
       </svg>
       <figcaption className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <span>{messages.comfortBand} {comfortMin.toFixed(1)}–{comfortMax.toFixed(1)} °C</span>
-        <span className="inline-flex items-center gap-1.5"><i className="inline-block h-0.5 w-3 bg-slate-900" /> Média</span>
-        <span className="inline-flex items-center gap-1.5"><i className="inline-block h-2 w-3 rounded-sm bg-slate-400/40" /> Mín / máx</span>
+        <span className="inline-flex items-center gap-1.5"><i className="inline-block h-0.5 w-3 bg-[#0F172A]" /> {onlyOperating ? messages.averageOperating : messages.average}</span>
+        <span className="inline-flex items-center gap-1.5"><i className="inline-block h-2 w-3 rounded-sm bg-slate-400/40" /> {onlyOperating ? messages.spreadOperating : messages.spread}</span>
         {external.length > 0 ? (
           <span className="inline-flex items-center gap-1.5"><i className="inline-block h-0.5 w-3 bg-[#00A3FF]" /> {messages.externalTemperature}</span>
         ) : null}
@@ -126,6 +134,7 @@ export function TemperatureChart({
           <span className="inline-flex items-center gap-1.5"><i className="inline-block h-2 w-2 rounded-sm bg-[#2547d0]" /> {messages.operatingMark}</span>
         ) : null}
         {hasGap ? <span>{messages.gap}</span> : null}
+        {onlyOperating ? <span>{messages.onlyOperatingNote}</span> : null}
         <span>{messages.storeClock}</span>
       </figcaption>
     </figure>

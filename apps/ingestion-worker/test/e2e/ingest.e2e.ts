@@ -23,11 +23,13 @@ describe("ingestion", () => {
     const result = await consumeBatch([packet], ["raw"], async (key) => {
       stored.push(key);
     }, async () => undefined);
+
     expect(result.acked).toBe(true);
     expect(stored).toHaveLength(1);
     const failed = await consumeBatch([packet], ["raw"], async () => {
       throw new Error("minio down");
     }, async () => undefined);
+
     expect(failed.acked).toBe(false);
     const clock = nextVirtualNow(new Date("2026-11-04T18:00:00Z"), new Date("2026-11-04T17:00:00Z"));
     expect(clock.toISOString()).toBe("2026-11-04T18:00:00.000Z");

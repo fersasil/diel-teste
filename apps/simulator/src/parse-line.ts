@@ -11,9 +11,11 @@ export function normalizeLine(line: string): string {
     savedData?: boolean;
     saved_data?: boolean;
   };
+
   if (raw.deviceId && raw.readings) {
     return line;
   }
+
   const timestamp = raw.timestamp ?? "";
   const utc = new Date(Date.parse(`${timestamp}Z`) - Number(raw.GMT ?? 0) * 3_600_000);
   return JSON.stringify({

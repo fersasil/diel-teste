@@ -32,6 +32,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             profileLabel={profileLabel[visible.profile]}
             clientName={visible.clientName}
             showSwitch={visible.profile === "diel_operator" && Boolean(visible.clientId)}
+            operator={visible.profile === "diel_operator"}
             asOf={visible.asOf ?? null}
           >
             {children}

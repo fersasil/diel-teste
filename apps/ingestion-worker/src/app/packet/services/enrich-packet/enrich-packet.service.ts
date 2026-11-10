@@ -9,6 +9,7 @@ export function enrichPacket(packet: Packet): EnrichedPoint[] {
     const sampleTime = new Date(
       newest - (count - 1 - index) * packet.intervalSeconds * 1000,
     );
+
     if (temperature < -10 || temperature > 60) {
       return {
         kind: "anomaly",
@@ -18,6 +19,7 @@ export function enrichPacket(packet: Packet): EnrichedPoint[] {
         reason: "OUT_OF_RANGE" as const,
       };
     }
+
     return {
       kind: "sample",
       deviceId: packet.deviceId,
