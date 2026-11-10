@@ -90,31 +90,41 @@ A web chama a API. A lista junta loja, expediente, faixa e temperatura no Timesc
 
 Cadastro e série ficam no mesmo banco. A lista junta loja, expediente, faixa e temperatura numa consulta SQL. O Timescale entra por causa da série: hypertable por tempo, agregação horária contínua e gapfill no gráfico.
 
-Prós: uma consulta só, com o cadastro do lado da amostra, e a janela longa no agregado. Contras: o pico da série e o cadastro dividem a mesma instância, e 15 e 30 minutos ainda leem a amostra.
+Prós: uma consulta só, com o cadastro do lado da amostra, e a janela longa no agregado.
+
+Contras: o pico da série e o cadastro dividem a mesma instância, e 15 e 30 minutos ainda leem a amostra.
 
 ### Redis
 
 A fila, o cache do relógio e o aviso ao vivo são três usos de naturezas diferentes, e os três cabem num processo que a ingestão já atravessa. A stream segura o pacote até o lote ser gravado. A chave `system:virtual_now` evita uma ida ao banco em toda página. O canal `live:{cliente}` empurra a leitura para quem está com a tela aberta.
 
-Prós: o MQTT confirma na entrada da fila, antes do `INSERT`, e os dois workers consomem o mesmo grupo. A tela lê o relógio sem ir ao banco. Contras: a stream é uma só, e a ingestão cresce até ela encher.
+Prós: o MQTT confirma na entrada da fila, antes do `INSERT`, e os dois workers consomem o mesmo grupo. A tela lê o relógio sem ir ao banco.
+
+Contras: a stream é uma só, e a ingestão cresce até ela encher.
 
 ### MinIO
 
 O cru é arquivo imutável, no formato de objeto do S3. O MinIO é essa API, para o exemplo rodar sem uma conta na nuvem. Cada lote vira um objeto novo, em `dt=AAAA-MM-DD/hour=HH/client=ID/{id}.jsonl.gz`, e não é reescrito.
 
-Prós: o JSON cru fica fora da tabela que a tela lê, e o objeto não é reescrito. Contras: o objeto é um arquivo compactado, sem índice por ambiente e intervalo. O gráfico precisaria abrir os lotes e filtrar na mão. A série no Timescale já responde isso. O pacote original continua no objeto, para auditoria e para rodar de novo.
+Prós: o JSON cru fica fora da tabela que a tela lê, e o objeto não é reescrito.
+
+Contras: o objeto é um arquivo compactado, sem índice por ambiente e intervalo. O gráfico precisaria abrir os lotes e filtrar na mão. A série no Timescale já responde isso. O pacote original continua no objeto, para auditoria e para rodar de novo.
 
 ### EMQX
 
 O dispositivo fala MQTT. O EMQX é o broker, com QoS 1 e grupo `$share/ingestion`. Cada pacote entra numa réplica só. A réplica entra nesse grupo. Fora dele, cada processo recebe todos os pacotes.
 
-Prós: a ingestão cresce com outra imagem igual, e a API fica fora desse caminho. Contras: o broker reparte por mensagem, sem olhar qual worker está ocupado.
+Prós: a ingestão cresce com outra imagem igual, e a API fica fora desse caminho.
+
+Contras: o broker reparte por mensagem, sem olhar qual worker está ocupado.
 
 ### API e web
 
 A API é NestJS e a web é Next.js. A ingestão fica noutro processo, então um pico de pacote atrasado não segura a lista. A API expõe o OpenAPI. A web lê essa API e o WebSocket `/live`.
 
-Prós: o worker escala pela entrada e a API pela consulta. Contras: sobe mais um serviço, e a tela depende da API estar no ar.
+Prós: o worker escala pela entrada e a API pela consulta.
+
+Contras: sobe mais um serviço, e a tela depende da API estar no ar.
 
 ## Decisões
 
