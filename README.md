@@ -95,7 +95,7 @@ A web chama a API. A lista junta loja, expediente, faixa e temperatura no Timesc
 ### Contras
 
 - O teto é um Postgres e uma stream. Mais workers não aliviam esses dois, e o cadastro divide o pico da série.
-- A ordem de um dispositivo vale dentro da faixa do processo. Entre workers, a chave única de ambiente e instante e o relógio que só avança é que deixam o resultado certo.
+- Dois pacotes do mesmo dispositivo podem cair em workers diferentes e ser gravados fora da ordem de chegada. Cada um entra no próprio instante. No mesmo instante, fica uma linha. O relógio só avança.
 - Relógio e ao vivo moram no Redis. Perder o Redis refaz o "agora" com os pacotes seguintes. O aviso some se ninguém está ouvindo.
 - Fora do grupo `$share/ingestion`, cada réplica recebe todos os pacotes.
 
