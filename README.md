@@ -80,7 +80,7 @@ O relógio é a chave `system:virtual_now`, o instante da amostra mais nova já 
 
 O ao vivo é um aviso no canal `live:{cliente}`, no máximo um por segundo por ambiente, com temperatura, conforto e status. A API entrega isso no WebSocket `/live` para quem está com a tela daquele cliente aberta. O aviso some se ninguém estiver ouvindo. O que fica guardado é a linha no TimescaleDB.
 
-A ingestão e a tela são caminhos separados. O simulador publica no EMQX em QoS 1. A assinatura `$share/ingestion/diel/telemetry` entrega cada pacote a um worker, que grava a linha na stream e confirma o MQTT. Os mesmos workers leem essa stream em lotes de até 2.000, cada um com o próprio nome. Dentro do processo, quatro faixas pelo hash do dispositivo mantêm a ordem dele. O lote vira um objeto novo no MinIO, em `dt=AAAA-MM-DD/hour=HH/client=ID/{id}.jsonl.gz`, e um `INSERT` por faixa no TimescaleDB. A API fica fora desse caminho.
+A ingestão e a tela são caminhos separados. O simulador publica no EMQX em QoS 1. A assinatura `$share/ingestion/diel/telemetry` entrega cada pacote a um worker, que grava a linha na stream e confirma o MQTT. A réplica entra nesse grupo. Fora dele, o broker entrega o pacote a cada processo. Os mesmos workers leem essa stream em lotes de até 2.000, cada um com o próprio nome. Dentro do processo, quatro faixas pelo hash do dispositivo mantêm a ordem dele. O lote vira um objeto novo no MinIO, em `dt=AAAA-MM-DD/hour=HH/client=ID/{id}.jsonl.gz`, e um `INSERT` por faixa no TimescaleDB. A API fica fora desse caminho.
 
 A web chama a API. A lista junta loja, expediente, faixa e temperatura no TimescaleDB, no mesmo Postgres do cadastro. De 1 hora para cima o gráfico lê a agregação horária. 15 e 30 minutos leem a amostra, com gapfill. O cabeçalho, o status e o período leem o relógio no Redis.
 
@@ -97,7 +97,6 @@ A web chama a API. A lista junta loja, expediente, faixa e temperatura no Timesc
 - O teto é um Postgres e uma stream. Mais workers não aliviam esses dois, e o cadastro divide o pico da série.
 - Dois pacotes do mesmo dispositivo podem cair em workers diferentes e ser gravados fora da ordem de chegada. Cada um entra no próprio instante. No mesmo instante, fica uma linha. O relógio só avança.
 - Relógio e ao vivo moram no Redis. Perder o Redis refaz o "agora" com os pacotes seguintes. O aviso some se ninguém está ouvindo.
-- Fora do grupo `$share/ingestion`, cada réplica recebe todos os pacotes.
 
 ## Decisões
 
