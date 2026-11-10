@@ -65,7 +65,7 @@ flowchart TB
   consome --> db[("TimescaleDB<br/>cadastro e série")]
 ```
 
-O pacote só chega no MinIO e no TimescaleDB depois de passar pela stream. A seta "consulta" lê essa série. A seta "relógio e ao vivo" é o mesmo Redis da fila, em outro papel.
+O pacote só chega no MinIO e no TimescaleDB depois de passar pela stream.
 
 ```mermaid
 flowchart LR
@@ -73,6 +73,8 @@ flowchart LR
   api -->|consulta| db[("TimescaleDB")]
   api -->|relógio e ao vivo| vivo[("Redis")]
 ```
+
+A seta "consulta" lê a série. A seta "relógio e ao vivo" é o mesmo Redis da fila, em outro papel.
 
 O relógio é a chave `system:virtual_now`, o instante da amostra mais nova já gravada. O arquivo termina em fevereiro de 2026, então status e períodos usam esse instante, e não o horário da máquina. O worker só avança a chave. Pacote atrasado fica no passado dele. O "Agora" do cabeçalho é esse valor, em horário de Brasília. Online é visto nos últimos 15 minutos dele.
 
@@ -100,9 +102,13 @@ A web chama a API. A lista junta loja, expediente, faixa e temperatura no Timesc
 
 ## Decisões
 
+Cliente, loja, ambiente, dispositivo e usuário ficam no cadastro. A loja guarda cidade, coordenadas, fuso e expediente. O ambiente guarda a faixa de conforto e o expediente, e um dispositivo aponta para ele. A amostra tratada é a hypertable `telemetry_samples`, única por ambiente e instante. Leitura rejeitada vai para `telemetry_anomalies`. A temperatura externa da cidade fica em `external_weather`, uma linha por loja e hora.
+
+O usuário tem perfil. O operador da Diel escolhe um cliente por vez. O gestor vê o cliente dele. O gerente vê as lojas da lista dele.
+
 Online, offline e sem dados usam o "agora" da amostra mais nova. Visto nos últimos 15 minutos, visto antes disso, ou nunca visto.
 
-O arquivo `telemetrias.jsonl` tem 180.951 pacotes. Três casos saem do caminho normal:
+Uma passagem no arquivo contou `saved_data`, leitura fora de −10 °C a 60 °C e o par dispositivo + timestamp repetido. São 180.951 pacotes. Três casos saem do caminho normal:
 
 - 247 chegaram atrasados (`saved_data`). A amostra entra no instante calculado. O relógio segue no pacote mais novo.
 - 220 trazem ao menos uma leitura fora de −10 °C a 60 °C. A leitura vira anomalia e fica fora da série.
@@ -110,6 +116,6 @@ O arquivo `telemetrias.jsonl` tem 180.951 pacotes. Três casos saem do caminho n
 
 O conforto do período é a fração do expediente em que a temperatura ficou na faixa, no fuso da loja. Cada amostra na faixa cobre 30 segundos, o intervalo do arquivo. Expediente sem leitura pesa no denominador, e o gráfico mostra essa lacuna.
 
-A visão da rede pagina, filtra por cliente, loja, ambiente, faixa e status do dispositivo, e ordena. A lista traz o resumo. A série abre no detalhe, e janelas de 1 hora ou mais leem a agregação horária.
+A API documentada entrega a lista de lojas e de ambientes, o resumo de um ambiente e a série num intervalo. A visão da rede tem último dia, última semana e 30 dias, contados a partir do "agora". Pagina, filtra por cliente, loja, ambiente, faixa e status do dispositivo, e ordena. A lista traz o resumo. O detalhe abre a série, a faixa de conforto e a temperatura externa da Open-Meteo. Janelas de 1 hora ou mais leem a agregação horária.
 
 A observabilidade sobe com a stack. O Prometheus lê `/metrics`. O Promtail manda o log dos containers ao Loki. O Grafana abre com as três fontes e o painel Ingestão, em http://localhost:3003. A senha inicial é a de `GRAFANA_ADMIN_PASSWORD`, `change-me` no exemplo.
