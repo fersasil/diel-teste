@@ -56,36 +56,25 @@ docker compose --profile test run --rm e2e-tests
 ```mermaid
 flowchart TB
   sim[Simulador] -->|MQTT QoS 1| emqx[EMQX]
-
-  subgraph ingest [Ingestão]
-    direction LR
-    w1[Worker 1]
-    w2[Worker 2]
-  end
-  emqx -->|cada pacote para um worker| ingest
-
-  subgraph dados [Dados]
-    direction LR
-    minio[("MinIO<br/>pacote cru")]
-    redis[("Redis<br/>fila, relógio e ao vivo")]
-    db[("TimescaleDB<br/>cadastro e série")]
-  end
-  ingest -->|grava| minio
-  ingest -->|grava| redis
-  ingest -->|grava| db
-
-  web[Next.js] --> api[API]
-  api -->|consulta| db
-  api -->|tempo real| redis
-
-  subgraph obs [Observabilidade]
-    direction LR
-    promtail[Promtail] --> loki[Loki] --> graf[Grafana]
-    prom[Prometheus] --> graf
-  end
+  emqx -->|cada pacote para um| w1[Worker 1]
+  emqx -->|cada pacote para um| w2[Worker 2]
+  w1 -->|enfileira| fila[("Redis Stream<br/>a fila")]
+  w2 -->|enfileira| fila
+  fila -->|lote de até 2.000| consome["os mesmos workers<br/>consomem a fila"]
+  consome --> minio[("MinIO<br/>pacote cru")]
+  consome --> db[("TimescaleDB<br/>cadastro e série")]
 ```
 
-Dois workers da mesma imagem assinam `$share/ingestion/diel/telemetry`. Cada pacote entra uma vez. Os dois leem a mesma stream do Redis, cada um com nome próprio. O mesmo dispositivo segue numa faixa só dentro do processo. Entre processos, a amostra é única por ambiente e instante, e o relógio virtual só anda para frente.
+O pacote só chega no MinIO e no TimescaleDB depois de passar pela stream. A tela lê o que já foi gravado. Relógio e tempo real ficam no Redis, ao lado da fila.
+
+```mermaid
+flowchart LR
+  web[Next.js] --> api[API]
+  api -->|consulta| db[("TimescaleDB")]
+  api -->|relógio e ao vivo| vivo[("Redis")]
+```
+
+Dois workers da mesma imagem assinam `$share/ingestion/diel/telemetry`. Cada pacote entra uma vez e o worker enfileira a linha na stream. Os dois consomem essa stream, cada um com nome próprio. O mesmo dispositivo segue numa faixa só dentro do processo. Entre processos, a amostra é única por ambiente e instante, e o relógio virtual só anda para frente.
 
 ## Decisões
 
