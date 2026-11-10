@@ -92,7 +92,7 @@ Cadastro e série ficam no mesmo banco. A lista junta loja, expediente, faixa e 
 
 Prós: uma consulta só, com o cadastro do lado da amostra, e a janela longa no agregado.
 
-Contras: o pico da série e o cadastro dividem a mesma instância, e 15 e 30 minutos ainda leem a amostra.
+Contras: gravar telemetria e abrir a lista usam o mesmo Postgres. Se a escrita aperta, a tela sente. O gráfico de 1 hora ou mais lê o resumo já calculado. O de 15 e 30 minutos lê as amostras, porque um balde de uma hora não se divide em quatro.
 
 ### Redis
 
