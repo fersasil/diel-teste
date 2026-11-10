@@ -38,7 +38,6 @@ interface SummaryBody {
 }
 
 const buckets = [
-  ["15m", "15 minutos"],
   ["30m", "30 minutos"],
   ["1h", "1 hora"],
   ["1d", "1 dia"],
@@ -214,7 +213,7 @@ export function EnvironmentBoard({
               comfortMin={band.min}
               comfortMax={band.max}
               timezone={timezone}
-              showTime={bucket === "15m" || bucket === "30m" || bucket === "1h"}
+              showTime={bucket === "30m" || bucket === "1h"}
               external={seriesExternal}
               points={seriesPoints}
             />

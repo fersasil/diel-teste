@@ -88,7 +88,7 @@
 - [X] T019 [US2] Acrescentar `storeName` e `timezone` em `apps/api-server/src/services/get-environment-summary.service.ts`. `timezone` é o fuso IANA da loja
 - [X] T020 [P] [US2] Implementar `apps/web/src/format.ts` com a formatação de T016, usando o fuso recebido e não o do browser
 - [X] T021 [US2] Criar o SVG em `apps/web/src/components/temperature-chart.tsx`. Média, mínima, máxima, lacuna quando a temperatura é nula, marca de expediente, faixa de conforto e série rotulada Temperatura externa. Sem biblioteca de gráfico e sem recalcular conforto. Se passar de 300 linhas, partir a geometria em `apps/web/src/components/chart-geometry.ts`
-- [X] T022 [US2] Em `apps/web/src/app/ambientes/[id]/page.tsx`, mostrar nome do ambiente, nome da loja, status por extenso, faixa em °C, o fuso uma vez, Voltar para `/rede` e as opções 15 minutos, 30 minutos e 1 hora, abrindo em 30 minutos com a opção ativa marcada. O eixo usa `format.ts`
+- [X] T022 [US2] Em `apps/web/src/app/ambientes/[id]/page.tsx`, mostrar nome do ambiente, nome da loja, status por extenso, faixa em °C, o fuso uma vez, Voltar para `/rede` e as opções 30 minutos, 1 hora, 1 dia, 1 semana e 1 mês, abrindo em 30 minutos com a opção ativa marcada. O eixo usa `format.ts`
 
 **Checkpoint**: O detalhe se abre direto, sem precisar da rede.
 

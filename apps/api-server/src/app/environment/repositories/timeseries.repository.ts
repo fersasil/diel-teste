@@ -18,7 +18,7 @@ export class TimeseriesRepository {
     timezone: string;
   }): Promise<SeriesPoint[]> {
     const interval = bucketInterval(input.bucket);
-    if (input.bucket !== "15m" && input.bucket !== "30m") {
+    if (input.bucket !== "30m") {
       return this.fromAggregate(input, interval);
     }
     const result = await getPool().query<{

@@ -38,7 +38,7 @@ A pessoa abre o detalhe e vê a temperatura do ambiente num gráfico, não numa 
 **Acceptance Scenarios**:
 
 1. **Given** um ambiente com histórico, **When** a pessoa abre o detalhe, **Then** vê o nome do ambiente, o nome da loja, a faixa de conforto e o status do sensor por extenso.
-2. **Given** a abertura do detalhe, **When** nenhum agrupamento foi escolhido, **Then** o gráfico usa 30 minutos e a opção de 30 minutos aparece marcada. A pessoa pode trocar para 15 minutos ou 1 hora, e a marcação acompanha a troca.
+2. **Given** a abertura do detalhe, **When** nenhum agrupamento foi escolhido, **Then** o gráfico usa 30 minutos e a opção de 30 minutos aparece marcada. A pessoa pode trocar para 1 hora, 1 dia, 1 semana ou 1 mês, e a marcação acompanha a troca.
 3. **Given** um intervalo sem leitura, **When** o gráfico é exibido, **Then** aquele trecho aparece como lacuna, sem temperatura inventada.
 4. **Given** temperatura externa da cidade, **When** ela aparece junto da série, **Then** está rotulada como temperatura externa e não se confunde com a temperatura do ambiente nem com a faixa de conforto.
 5. **Given** o detalhe aberto, **When** a pessoa pede para voltar, **Then** retorna à visão da rede.
@@ -119,7 +119,7 @@ Quando a leitura não vem, a sessão vence ou o ambiente não existe, a pessoa v
 - **FR-007**: Quando houver mais lojas do que a página mostra, a pessoa MUST ver que existem mais e MUST conseguir ir à página seguinte e voltar à anterior.
 - **FR-008**: O nome do ambiente MUST ser o acionável que abre o detalhe. O detalhe MUST mostrar o nome do ambiente, o nome da loja, a faixa de conforto com unidade °C e o status do sensor.
 - **FR-009**: O detalhe MUST mostrar um gráfico do agrupamento escolhido. Cada intervalo MUST deixar visíveis a média, a mínima, a máxima, se caiu no expediente e, quando não houver leitura, a lacuna.
-- **FR-010**: Ao abrir, o agrupamento MUST ser 30 minutos. As opções MUST ser 15 minutos, 30 minutos e 1 hora. A opção ativa MUST aparecer marcada.
+- **FR-010**: Ao abrir, o agrupamento MUST ser 30 minutos. As opções MUST ser 30 minutos, 1 hora, 1 dia, 1 semana e 1 mês. A opção ativa MUST aparecer marcada.
 - **FR-011**: A temperatura externa MUST aparecer rotulada como "Temperatura externa", separada da série do ambiente e da faixa de conforto. Ela MUST NOT alterar a faixa.
 - **FR-012**: Horário lido pela pessoa, inclusive o eixo do gráfico, MUST estar no fuso da loja. O nome do fuso MUST aparecer uma vez no detalhe. Instante em horário universal cru MUST NOT aparecer.
 - **FR-013**: Temperatura lida pela pessoa MUST usar a unidade °C e uma casa decimal.

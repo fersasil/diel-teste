@@ -82,7 +82,7 @@ O ao vivo é um aviso no canal `live:{cliente}`, no máximo um por segundo por a
 
 A ingestão e a tela são caminhos separados. O simulador publica no EMQX em QoS 1. A assinatura `$share/ingestion/diel/telemetry` entrega cada pacote a um worker, que grava a linha na stream e confirma o MQTT. A réplica entra nesse grupo. Fora dele, o broker entrega o pacote a cada processo. Os mesmos workers leem essa stream em lotes de até 2.000, cada um com o próprio nome. Dentro do processo, quatro faixas pelo hash do dispositivo tratam aparelhos diferentes ao mesmo tempo. O instante da amostra define a linha, então a ordem de chegada entre workers não muda a série. O lote vira um objeto novo no MinIO, em `dt=AAAA-MM-DD/hour=HH/client=ID/{id}.jsonl.gz`, e um `INSERT` por faixa no TimescaleDB. A API fica fora desse caminho.
 
-A web chama a API. A lista junta loja, expediente, faixa e temperatura no TimescaleDB, no mesmo Postgres do cadastro. De 1 hora para cima o gráfico lê a agregação horária. 15 e 30 minutos leem a amostra, com gapfill. O cabeçalho, o status e o período leem o relógio no Redis.
+A web chama a API. A lista junta loja, expediente, faixa e temperatura no TimescaleDB, no mesmo Postgres do cadastro. De 1 hora para cima o gráfico lê a agregação horária. 30 minutos leem a amostra, com gapfill. O cabeçalho, o status e o período leem o relógio no Redis.
 
 ## Tecnologias
 
@@ -92,7 +92,7 @@ Cadastro e série ficam no mesmo banco. A lista junta loja, expediente, faixa e 
 
 Prós: uma consulta só, com o cadastro do lado da amostra, e a janela longa no agregado.
 
-Contras: gravar telemetria e abrir a lista usam o mesmo Postgres. Se a escrita aperta, a tela sente. O gráfico de 1 hora ou mais lê o resumo já calculado. O de 15 e 30 minutos lê as amostras, porque um balde de uma hora não se divide em quatro.
+Contras: gravar telemetria e abrir a lista usam o mesmo Postgres. Se a escrita aperta, a tela sente. O gráfico de 1 hora ou mais lê o resumo já calculado. O de 30 minutos lê as amostras, porque a ficha de uma hora não se parte ao meio.
 
 ### Redis
 

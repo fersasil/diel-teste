@@ -81,13 +81,13 @@
 
 ## Phase 4: User Story 2 - Investigar um ambiente (Priority: P1)
 
-**Goal**: Série de até 30 dias, balde inicial de 30 minutos, escolha de 15 minutos ou 1 hora, lacuna sem temperatura inventada.
+**Goal**: Série com balde inicial de 30 minutos, escolha de 1 hora, 1 dia, 1 semana ou 1 mês, lacuna sem temperatura inventada.
 
 **Independent Test**: Um ambiente com buraco mostra média, mínima, máxima e expediente no balde escolhido, sem preencher o buraco.
 
 ### Tests for User Story 2
 
-- [X] T026 [P] [US2] Teste unitário em `apps/api-server/src/services/timeseries-bucket.test.ts`: ausência vale `30m`; aceita `15m`, `30m` e `1h`; janela acima de 30 dias é `INVALID_RANGE`; outro balde é `INVALID_BUCKET`
+- [X] T026 [P] [US2] Teste unitário em `apps/api-server/src/services/timeseries-bucket.test.ts`: ausência vale `30m`; aceita `30m`, `1h`, `1d`, `1w` e `1mo`; rejeita `15m`; outro balde é `INVALID_BUCKET`
 - [X] T027 [P] [US2] E2E em `apps/api-server/test/e2e/timeseries.e2e.ts` para o detalhe e a série, com balde vazio de temperaturas nulas
 
 ### Implementation for User Story 2
@@ -96,7 +96,7 @@
 - [X] T029 [US2] Implementar `apps/api-server/src/services/get-timeseries.service.ts`
 - [X] T030 [US2] Implementar `apps/api-server/src/services/get-environment-summary.service.ts`. O percentual é amostras `IN_RANGE` no expediente dividido pelas amostras no expediente. Sem amostra no expediente, o percentual vem nulo
 - [X] T031 [US2] Implementar `GET /environments/:id/summary` e `GET /environments/:id/timeseries` em `apps/api-server/src/http/environment.controller.ts`. Ambiente de outro cliente responde `NOT_FOUND`
-- [X] T032 [US2] Implementar `apps/web/src/app/ambientes/[id]/page.tsx` com seletor de 15 minutos, 30 minutos e 1 hora, abrindo em 30 minutos, lacuna visível e texto em português
+- [X] T032 [US2] Implementar `apps/web/src/app/ambientes/[id]/page.tsx` com seletor de 30 minutos, 1 hora, 1 dia, 1 semana e 1 mês, abrindo em 30 minutos, lacuna visível e texto em português
 
 **Checkpoint**: O detalhe funciona sem a visão da rede.
 

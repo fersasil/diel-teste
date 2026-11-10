@@ -7,8 +7,7 @@
 ## Summary
 
 Gestores veem, por loja, quantos ambientes estão dentro, acima, abaixo ou sem
-dados, e abrem a série de até 30 dias com agrupamento de 15 minutos, 30
-minutos ou 1 hora. O acesso separa gestor, gerente e operador Diel.
+dados, e abrem a série com agrupamento de 30 minutos, 1 hora, 1 dia, 1 semana e 1 mês. O mais fino é 30 minutos. O acesso separa gestor, gerente e operador Diel.
 
 A ingestão fica num processo próprio. Ela só confirma a leitura depois de
 arquivar o lote cru e gravar a série tratada. A API lê o estado já calculado

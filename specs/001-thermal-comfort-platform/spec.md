@@ -15,7 +15,7 @@
 - Q: Quem pode ver lojas de mais de um cliente? → A: Só o operador Diel, com perfil global. Gestor e gerente ficam no próprio cliente. O seletor do operador foca um cliente por vez.
 - Q: Quando uma loja tem vários ambientes, o que a visão da rede mostra sobre o conforto dessa loja? → A: A loja aparece uma vez e mostra quantos ambientes estão dentro, acima, abaixo e sem dados.
 - Q: Quem pode listar os lotes originais de um dia? → A: O operador Diel, no cliente em foco, e o gestor de rede, no próprio cliente.
-- Q: No detalhe do ambiente, qual intervalo agrupa a temperatura da série? → A: A pessoa escolhe na tela: 15 minutos, 30 minutos ou 1 hora.
+- Q: No detalhe do ambiente, qual intervalo agrupa a temperatura da série? → A: A pessoa escolhe na tela: 30 minutos, 1 hora, 1 dia, 1 semana ou 1 mês.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -44,7 +44,7 @@ O gestor abre o detalhe de um ambiente e vê a temperatura ao longo de até 30 d
 
 **Acceptance Scenarios**:
 
-1. **Given** um ambiente com histórico de até 30 dias, **When** o gestor abre o detalhe, **Then** a série começa em 30 minutos e ele pode trocar para 15 minutos ou 1 hora.
+1. **Given** um ambiente com histórico de até 30 dias, **When** o gestor abre o detalhe, **Then** a série começa em 30 minutos e ele pode trocar para 1 hora, 1 dia, 1 semana ou 1 mês.
 2. **Given** um agrupamento escolhido, **When** a série é exibida, **Then** cada intervalo mostra média, mínima, máxima e se caiu no expediente.
 3. **Given** um intervalo sem leituras, **When** a série é exibida, **Then** o intervalo aparece como lacuna, sem temperatura inventada.
 
@@ -162,7 +162,7 @@ O operador Diel, no cliente em foco, e o gestor de rede, no próprio cliente, lo
 - **FR-011**: O expediente MUST ser interpretado no fuso da loja.
 - **FR-012**: O "agora" da plataforma MUST ser o instante da leitura processada mais recente, não o relógio do aparelho de quem olha.
 - **FR-013**: O status MUST ser online até 15 minutos, offline acima de 15 minutos e sem dados quando não existe leitura.
-- **FR-014**: O detalhe MUST mostrar a série de até 30 dias. A pessoa MUST escolher o agrupamento entre 15 minutos, 30 minutos e 1 hora. Ao abrir, o agrupamento MUST ser 30 minutos. Cada intervalo MUST mostrar média, mínima, máxima e se caiu no expediente.
+- **FR-014**: O detalhe MUST mostrar a série. A pessoa MUST escolher o agrupamento entre 30 minutos, 1 hora, 1 dia, 1 semana e 1 mês. Ao abrir, o agrupamento MUST ser 30 minutos. Cada intervalo MUST mostrar média, mínima, máxima e se caiu no expediente.
 - **FR-015**: Intervalo sem leitura MUST aparecer como lacuna, no agrupamento escolhido.
 - **FR-016**: Leitura abaixo de −10 °C ou acima de 60 °C MUST ficar fora da série tratada e MUST ser registrada como anomalia.
 - **FR-017**: Leitura de −10 °C e de 60 °C MUST permanecer na série tratada.

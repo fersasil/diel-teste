@@ -18,9 +18,6 @@ export function validateRange(from: Date, to: Date): "OK" | "INVALID_RANGE" {
 }
 
 export function bucketInterval(bucket: Bucket): string {
-  if (bucket === "15m") {
-    return "15 minutes";
-  }
   if (bucket === "1h") {
     return "1 hour";
   }

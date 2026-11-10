@@ -44,8 +44,8 @@ reabre a mesma página. Isso não é a página genérica de exceção.
 Nome do ambiente, nome da loja, status do sensor por extenso, faixa de
 conforto em °C e o fuso uma vez. Voltar retorna a `/rede`.
 
-Gráfico do agrupamento, abrindo em 30 minutos. Opções: 15 minutos, 30
-minutos, 1 hora. A opção ativa fica marcada. O endereço guarda a escolha.
+Gráfico do agrupamento, abrindo em 30 minutos. Opções: 30 minutos, 1 hora,
+1 dia, 1 semana e 1 mês. A opção ativa fica marcada. O endereço guarda a escolha.
 
 O gráfico mostra média, mínima, máxima, trecho de expediente, lacuna sem
 ponto inventado e a série rotulada "Temperatura externa", separada da faixa.

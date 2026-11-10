@@ -39,7 +39,7 @@ para Postgres ou MQTT instalado só na máquina não conta.
 7. Leitura de 80 °C vira anomalia e não entra na série. Leitura de 60 °C
    entra.
 8. Pacote atrasado aparece na hora histórica, não na hora de chegada.
-9. Detalhe abre em balde de 30 minutos, aceita `15m` e `1h`, e mostra
+9. Detalhe abre em balde de 30 minutos, aceita `1h`, `1d`, `1w` e `1mo`, e mostra
    lacuna sem inventar temperatura. Janela acima de 30 dias é rejeitada.
    A série de 30 dias responde em menos de 100 ms no banco.
 10. Clima externo ausente não falha o detalhe.

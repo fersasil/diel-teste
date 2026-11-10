@@ -87,7 +87,7 @@ export const openApiDocument = {
           periodParam(),
           dateParam(),
           ...dayRange(),
-          { name: "bucket", in: "query", schema: { type: "string", enum: ["15m", "30m", "1h", "1d", "1w", "1mo"] } },
+          { name: "bucket", in: "query", schema: { type: "string", enum: ["30m", "1h", "1d", "1w", "1mo"] } },
         ],
         responses: { "200": { description: "pontos, lacunas e temperatura externa" } },
       },

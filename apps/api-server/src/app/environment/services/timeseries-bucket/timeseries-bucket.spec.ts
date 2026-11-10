@@ -1,10 +1,10 @@
 import { resolveBucket, validateRange } from "./timeseries-bucket.service";
 
 describe("timeseries bucket", () => {
-  it("defaults to 30m and accepts only 15m, 30m and 1h", () => {
+  it("defaults to 30m and rejects a quarter hour", () => {
     expect(resolveBucket()).toBe("30m");
     expect(resolveBucket("")).toBe("30m");
-    expect(resolveBucket("15m")).toBe("15m");
+    expect(resolveBucket("15m")).toBe("INVALID_BUCKET");
     expect(resolveBucket("30m")).toBe("30m");
     expect(resolveBucket("1h")).toBe("1h");
     expect(resolveBucket("1d")).toBe("1d");

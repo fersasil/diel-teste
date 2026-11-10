@@ -31,7 +31,7 @@ test("entry, network and detail fit the viewport and take keyboard focus", async
     await storeLink.focus();
     await storeLink.click();
     await expect(page.locator(".buckets a[aria-current='page']")).toHaveText("30 minutos");
-    await page.getByRole("link", { name: "15 minutos" }).focus();
+    await page.getByRole("link", { name: "1 hora" }).focus();
     await expectFits(page);
   }
 });

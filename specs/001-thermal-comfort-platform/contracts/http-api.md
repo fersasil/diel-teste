@@ -46,7 +46,7 @@ Fora do escopo: `NOT_FOUND`. O recurso de outro cliente também é
 
 ## GET /environments/:id/timeseries
 
-Query: `from`, `to`, `bucket`. `bucket` é `15m`, `30m` ou `1h`. Ausente,
+Query: `from`, `to`, `bucket`. `bucket` é `30m`, `1h`, `1d`, `1w` ou `1mo`. Ausente,
 vale `30m`. Janela maior que 30 dias: `INVALID_RANGE`. Outro balde:
 `INVALID_BUCKET`.
 

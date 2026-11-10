@@ -52,7 +52,8 @@ export default async function EnvironmentPage({
   }
   const { id } = await params;
   const query = await searchParams;
-  const bucket = query.bucket ?? "30m";
+  const requested = query.bucket ?? "";
+  const bucket = ["30m", "1h", "1d", "1w", "1mo"].includes(requested) ? requested : "30m";
   const period = parseNetworkPeriod(query.period);
   const date = dayParam(query.date);
   const from = dayParam(query.from);
