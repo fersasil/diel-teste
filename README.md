@@ -65,7 +65,7 @@ flowchart TB
   consome --> db[("TimescaleDB<br/>cadastro e série")]
 ```
 
-O pacote só chega no MinIO e no TimescaleDB depois de passar pela stream. A tela lê o que já foi gravado. Relógio e tempo real ficam no Redis, ao lado da fila.
+O pacote só chega no MinIO e no TimescaleDB depois de passar pela stream. A seta "consulta" lê essa série. A seta "relógio e ao vivo" é o mesmo Redis da fila, em outro papel.
 
 ```mermaid
 flowchart LR
@@ -73,6 +73,10 @@ flowchart LR
   api -->|consulta| db[("TimescaleDB")]
   api -->|relógio e ao vivo| vivo[("Redis")]
 ```
+
+O relógio é a chave `system:virtual_now`, o instante da amostra mais nova já gravada. O arquivo termina em fevereiro de 2026, então status e períodos usam esse instante, e não o horário da máquina. O worker só avança a chave. Pacote atrasado fica no passado dele. O "Agora" do cabeçalho é esse valor, em horário de Brasília. Online é visto nos últimos 15 minutos dele.
+
+O ao vivo é um aviso no canal `live:{cliente}`, no máximo um por segundo por ambiente, com temperatura, conforto e status. A API entrega isso no WebSocket `/live` para quem está com a tela daquele cliente aberta. O aviso some se ninguém estiver ouvindo. O que fica guardado é a linha no TimescaleDB.
 
 Dois workers da mesma imagem assinam `$share/ingestion/diel/telemetry`. Cada pacote entra uma vez e o worker enfileira a linha na stream. Os dois consomem essa stream, cada um com nome próprio. O mesmo dispositivo segue numa faixa só dentro do processo. Entre processos, a amostra é única por ambiente e instante, e o relógio virtual só anda para frente.
 
