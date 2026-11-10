@@ -42,7 +42,7 @@ export async function ingestLines(lines: string[]): Promise<boolean> {
     for (const item of prepared) {
       lanes[laneOf(item.packet.deviceId)].push(item);
     }
-    await commitBatch({ samples: [], anomalies: [], rawBatches: rawRows(prepared), latests: [] });
+    await commitBatch({ samples: [], anomalies: [], rawBatches: rawRows(prepared), latests: [], virtualNow: null });
     await Promise.all(lanes.filter((lane) => lane.length > 0).map((lane) => commitLane(lane)));
     await publishLane(prepared);
     return true;
@@ -132,7 +132,13 @@ async function assignRawParts(prepared: Prepared[]): Promise<void> {
 async function commitLane(lane: Prepared[]): Promise<void> {
   const samples = lane.flatMap((item) => item.samples.map((sample) => ({ ...sample, rawBatchKey: item.rawBatchKey })));
   const anomalies = lane.flatMap((item) => item.anomalies.map((anomaly) => ({ ...anomaly, rawBatchKey: item.rawBatchKey })));
-  await commitBatch({ samples, anomalies, rawBatches: [], latests: winners(lane) });
+  await commitBatch({
+    samples,
+    anomalies,
+    rawBatches: [],
+    latests: winners(lane),
+    virtualNow: newestSample(samples),
+  });
 }
 
 function rawRows(lane: Prepared[]): Array<{ key: string; clientId: string; recordedAt: Date; packetCount: number }> {
@@ -149,6 +155,13 @@ function rawRows(lane: Prepared[]): Array<{ key: string; clientId: string; recor
     counts.set(item.rawBatchKey, { clientId: item.device.clientId, recordedAt: item.recordedAt, packetCount: 1 });
   }
   return [...counts.entries()].map(([key, row]) => ({ key, ...row }));
+}
+
+function newestSample(samples: Array<{ point: { sampleTime: Date } }>): Date | null {
+  return samples.reduce<Date | null>((max, sample) => {
+    const time = sample.point.sampleTime;
+    return !max || time > max ? time : max;
+  }, null);
 }
 
 function winners(lane: Prepared[]): BatchLatest[] {

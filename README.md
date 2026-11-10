@@ -76,7 +76,7 @@ flowchart LR
 
 A seta "consulta" lê a série. A seta "relógio e ao vivo" é o mesmo Redis da fila, em outro papel.
 
-O relógio é a chave `system:virtual_now`, o instante da amostra mais nova já gravada. O arquivo termina em fevereiro de 2026, então status e períodos usam esse instante, e não o horário da máquina. O worker só avança a chave. Pacote atrasado fica no passado dele. O "Agora" do cabeçalho é esse valor, em horário de Brasília. Online é visto nos últimos 15 minutos dele.
+O relógio é o instante da amostra mais nova. Ele fica numa linha do Postgres, gravada junto com as amostras, e na chave `system:virtual_now` para a tela não ir ao banco toda vez. Se a chave some, ela se refaz com essa linha. O arquivo termina em fevereiro de 2026, então status e períodos usam esse instante, e não o horário da máquina. O worker só avança o relógio. Pacote atrasado fica no passado dele. O "Agora" do cabeçalho é esse valor, em horário de Brasília. Online é visto nos últimos 15 minutos dele.
 
 O ao vivo é um aviso no canal `live:{cliente}`, no máximo um por segundo por ambiente, com temperatura, conforto e status. A API entrega isso no WebSocket `/live` para quem está com a tela daquele cliente aberta. O aviso some se ninguém estiver ouvindo. O que fica guardado é a linha no TimescaleDB.
 
@@ -95,7 +95,6 @@ A web chama a API. A lista junta loja, expediente, faixa e temperatura no Timesc
 ### Contras
 
 - O teto é um Postgres e uma stream. Mais workers não aliviam esses dois, e o cadastro divide o pico da série.
-- Relógio e ao vivo moram no Redis. Perder o Redis refaz o "agora" com os pacotes seguintes. O aviso some se ninguém está ouvindo.
 
 ## Decisões
 

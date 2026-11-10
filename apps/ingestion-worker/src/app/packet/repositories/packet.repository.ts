@@ -28,6 +28,7 @@ export async function commitBatch(input: {
   anomalies: BatchAnomaly[];
   rawBatches: Array<{ key: string; clientId: string; recordedAt: Date; packetCount: number }>;
   latests: BatchLatest[];
+  virtualNow: Date | null;
 }): Promise<void> {
   const client = await getPool().connect();
   try {
@@ -117,6 +118,16 @@ export async function commitBatch(input: {
           input.latests.map((latest) => latest.sample.comfortStatus),
           input.latests.map((latest) => latest.operatingNow),
         ],
+      );
+    }
+    if (input.virtualNow) {
+      await client.query(
+        `INSERT INTO virtual_clock (id, virtual_now)
+         VALUES (1, $1)
+         ON CONFLICT (id) DO UPDATE
+           SET virtual_now = EXCLUDED.virtual_now
+         WHERE virtual_clock.virtual_now < EXCLUDED.virtual_now`,
+        [input.virtualNow],
       );
     }
     await client.query("COMMIT");
