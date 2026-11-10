@@ -1,10 +1,8 @@
 # 3. Escalabilidade e concorrência
 
-Um volume de 20 GB/dia de pacotes JSON (cerca de 180 bytes por pacote)
-equivale a cerca de 115 milhões de pacotes/dia (cerca de 1.330 pacotes/segundo
-em média, com picos de 3.000 a 5.000 msg/s). Como cada pacote traz 12
-amostras, são 1,38 bilhão de amostras térmicas por dia (cerca de 16.000
-pontos/segundo).
+Em produção o cru chega a 20 GB por dia. Ele vai para o objeto, um arquivo
+novo por lote. A série tratada fica na hypertable, e o gráfico longo lê o
+resumo horário.
 
 ## 3.1. Onde o trabalho pesado fica
 
@@ -32,7 +30,7 @@ As amostras do lote entram num `INSERT` com `UNNEST`. A chave única é
 ## 3.3. Leitura
 
 Continuous aggregate `cagg_environment_hourly`: a listagem de centenas de
-lojas responde em menos de 30 ms.
+lojas lê esse resumo, já gravado.
 
 Estado atual desnormalizado (`environments.last_*`): status ONLINE/OFFLINE,
 última temperatura e conforto atual ficam nessa tabela, consultados por

@@ -19,9 +19,8 @@ crus de forma econômica, durável e totalmente desacoplada do banco
 transacional usando Object Storage (MinIO / Amazon S3) particionado e
 comprimido com GZIP.
 
-Baixa latência em consultas de séries temporais: responder consultas de
-séries temporais de até 30 dias em menos de 100 ms usando Hypertables,
-Continuous Aggregates e Gap Filling nativos do PostgreSQL + TimescaleDB.
+Consultas de série: a janela longa lê a hypertable com agregação contínua
+e gapfill do PostgreSQL + TimescaleDB.
 
 Observabilidade completa (stack PLG): monitorar métricas, logs estruturados
 e saúde da ingestão usando Prometheus + Grafana Loki + Grafana, aliados a
