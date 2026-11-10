@@ -102,7 +102,7 @@ Prós: o MQTT confirma na entrada da fila, antes do `INSERT`, e os dois workers 
 
 O cru é arquivo imutável, no formato de objeto do S3. O MinIO é essa API, para o exemplo rodar sem uma conta na nuvem. Cada lote vira um objeto novo, em `dt=AAAA-MM-DD/hour=HH/client=ID/{id}.jsonl.gz`, e não é reescrito.
 
-Prós: o JSON cru fica fora da tabela que a tela lê, e o objeto não é reescrito. Contras: o gráfico não consulta o MinIO. O pacote original se lê no objeto.
+Prós: o JSON cru fica fora da tabela que a tela lê, e o objeto não é reescrito. Contras: o objeto é um arquivo compactado, sem índice por ambiente e intervalo. O gráfico precisaria abrir os lotes e filtrar na mão. A série no Timescale já responde isso. O pacote original continua no objeto, para auditoria e para rodar de novo.
 
 ### EMQX
 
